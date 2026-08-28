@@ -166,6 +166,10 @@ export class PurviewService {
     return this.store.getPrincipal(id);
   }
 
+  listPrincipals(): Principal[] {
+    return this.store.listPrincipals();
+  }
+
   // -------------------------------------------------------------------------
   // Work lifecycle
   // -------------------------------------------------------------------------
