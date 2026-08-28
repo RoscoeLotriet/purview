@@ -60,23 +60,36 @@ export function resolvedBlocks(e: Escalation): SlackBlock[] {
   ];
 }
 
-/** The §4.5 digest: low-severity escalations batched into one message. */
+/**
+ * The §4.5 digest: low-severity escalations batched into one message. Already
+ * resolved entries (e.g. timeouts, J5) render as facts, not requests.
+ */
 export function digestBlocks(escalations: Escalation[]): SlackBlock[] {
   const header: SlackBlock = {
     type: 'header',
     text: { type: 'plain_text', text: `Purview digest — ${escalations.length} item(s)` },
   };
-  const items = escalations.flatMap<SlackBlock>((e) => [
-    { type: 'section', text: { type: 'mrkdwn', text: `*${e.question}*\n${e.context_summary}` } },
-    {
-      type: 'actions',
-      elements: e.options.map((o) => ({
-        type: 'button',
-        text: { type: 'plain_text', text: o.label },
-        action_id: `${RESOLVE_ACTION_PREFIX}:${e.id}:${o.id}`,
-        value: o.id,
-      })),
-    },
-  ]);
+  const items = escalations.flatMap<SlackBlock>((e) => {
+    if (e.resolved_at) {
+      const chosen = e.options.find((o) => o.id === e.chosen_option_id)?.label;
+      const outcome =
+        e.resolution === 'timed_out'
+          ? `⏱ Timed out — \`${e.timeout_action}\` applied`
+          : `✅ ${chosen ?? e.free_text ?? 'Resolved'}`;
+      return [{ type: 'section', text: { type: 'mrkdwn', text: `*${e.question}*\n${outcome}` } }];
+    }
+    return [
+      { type: 'section', text: { type: 'mrkdwn', text: `*${e.question}*\n${e.context_summary}` } },
+      {
+        type: 'actions',
+        elements: e.options.map((o) => ({
+          type: 'button',
+          text: { type: 'plain_text', text: o.label },
+          action_id: `${RESOLVE_ACTION_PREFIX}:${e.id}:${o.id}`,
+          value: o.id,
+        })),
+      },
+    ];
+  });
   return [header, ...items];
 }

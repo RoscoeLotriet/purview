@@ -183,7 +183,7 @@ export class PurviewService {
     if (parent) this.assertBudgetFits(parent, args.budget ?? null);
 
     const id = newId('wi');
-    const segment = newPathSegment();
+    const path = this.uniqueChildPath(parent);
     const nowIso = this.now().toISOString();
     const rollupInput: RollupOwnInput = {
       state: 'ready',
@@ -196,7 +196,7 @@ export class PurviewService {
       id,
       parent_id: parent?.id ?? null,
       root_id: parent?.root_id ?? id,
-      path: parent ? `${parent.path}.${segment}` : segment,
+      path,
       depth: parent ? parent.depth + 1 : 0,
       intent: args.intent,
       spec: null,
@@ -208,7 +208,14 @@ export class PurviewService {
       rollup: emptyRollup(rollupInput),
       blast_radius: args.blast_radius ?? 'none',
       confidence: null,
-      priority: args.priority ?? (parent ? this.mustGet(parent.root_id).priority : 0.5),
+      // root_priority is human-assigned (spec §3): agents cannot buy the
+      // immediate band by inflating priority on items they create.
+      priority:
+        actor.kind === 'human' && args.priority !== undefined
+          ? args.priority
+          : parent
+            ? this.mustGet(parent.root_id).priority
+            : 0.5,
       budget: args.budget ?? null,
       consumed: {},
       artifacts: [],
@@ -469,16 +476,22 @@ export class PurviewService {
       this.setState(item.id, 'awaiting_approval', null, actor);
     }
 
+    // Register the waiter before anything yields to the event loop: an answer
+    // arriving while the Slack post is in flight must still settle this call.
+    let outcomePromise: Promise<EscalateOutcome> | null = null;
+    if (args.blocking) {
+      outcomePromise = new Promise<EscalateOutcome>((resolve) => {
+        this.waiters.set(escalation.id, resolve);
+      });
+    }
+
     if (band !== 'digest') {
       await this.notify((b) => b.postEscalation(escalation, item));
     }
     this.scheduleTimeout(escalation.id, timeoutSeconds);
 
-    if (!args.blocking) return { escalation, outcome: null };
-
-    const outcome = await new Promise<EscalateOutcome>((resolve) => {
-      this.waiters.set(escalation.id, resolve);
-    });
+    if (!outcomePromise) return { escalation, outcome: null };
+    const outcome = await outcomePromise;
     const resolved = this.store.getEscalation(escalation.id) ?? escalation;
     return { escalation: resolved, outcome };
   }
@@ -524,11 +537,19 @@ export class PurviewService {
     return escalation;
   }
 
-  /** Digest-band escalations not yet delivered (deferred, never dropped). */
+  /** Timed-out escalations awaiting digest delivery as facts (J5). */
+  private timeoutFacts: Escalation[] = [];
+
+  /**
+   * Digest-band escalations not yet delivered (deferred, never dropped), plus
+   * timeouts that fired since the last flush — those appear as facts, not
+   * requests (J5).
+   */
   pendingDigest(): Escalation[] {
-    return this.store
+    const open = this.store
       .openEscalations()
       .filter((e) => e.routing === 'digest' && !this.flushedDigestIds.has(e.id));
+    return [...open, ...this.timeoutFacts];
   }
 
   async flushDigest(): Promise<void> {
@@ -536,6 +557,7 @@ export class PurviewService {
     if (pending.length === 0) return;
     await this.notify((b) => b.postDigest(pending));
     for (const e of pending) this.flushedDigestIds.add(e.id);
+    this.timeoutFacts = [];
   }
 
   /** Cancel outstanding timers (server shutdown, test teardown). */
@@ -545,6 +567,7 @@ export class PurviewService {
   }
 
   private scheduleTimeout(escalation_id: string, timeoutSeconds: number): void {
+    if (this.store.getEscalation(escalation_id)?.resolved_at) return;
     const timer = setTimeout(() => this.handleTimeout(escalation_id), timeoutSeconds * 1000);
     timer.unref?.();
     this.timers.set(escalation_id, timer);
@@ -552,6 +575,7 @@ export class PurviewService {
 
   /** J5: nobody answered. The declared timeout_action fires; nothing is silently lost. */
   private handleTimeout(escalation_id: string): void {
+    this.timers.delete(escalation_id);
     const escalation = this.store.getEscalation(escalation_id);
     if (!escalation || escalation.resolved_at) return;
     const now = this.now();
@@ -583,7 +607,7 @@ export class PurviewService {
           }
           break;
         case 'proceed':
-          if (item.state === 'awaiting_approval') {
+          if (canTransition(item.state, 'running')) {
             this.setState(item.id, 'running', null, this.systemPrincipal);
           }
           break;
@@ -608,6 +632,7 @@ export class PurviewService {
       }
     }
 
+    this.timeoutFacts.push(escalation);
     void this.notify((b) => b.postResolution(escalation));
     this.settle(escalation);
   }
@@ -713,6 +738,15 @@ export class PurviewService {
   // -------------------------------------------------------------------------
   // Internals
   // -------------------------------------------------------------------------
+
+  /** Sibling path segments must be unique or subtrees silently merge. */
+  protected uniqueChildPath(parent: WorkItem | null): string {
+    for (let attempt = 0; attempt < 1000; attempt += 1) {
+      const candidate = parent ? `${parent.path}.${newPathSegment()}` : newPathSegment();
+      if (this.store.subtree(candidate, 0).length === 0) return candidate;
+    }
+    throw new Error('could not allocate a unique path segment');
+  }
 
   protected mustGet(id: WorkItemId): WorkItem {
     const item = this.store.getWorkItem(id);

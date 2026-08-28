@@ -55,6 +55,11 @@ defaults from the item's blast radius: `irreversible`/`costly` → `abort`,
 
 Without Slack configured the bridge logs to stdout and everything else works.
 
+> **Attribution caveat (v0):** the signature proves an interaction came from your
+> Slack workspace, not which member tapped. Taps from usernames that don't match a
+> known human principal are recorded as the default accountable human. Keep the
+> escalation channel restricted to people allowed to answer for them.
+
 ## Environment
 
 | Variable | Default | Purpose |
