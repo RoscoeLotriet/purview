@@ -1,5 +1,6 @@
 import { addBudget, fitsWithin, remainingBudget } from '../domain/budget.js';
 import { newId, newPathSegment } from '../domain/ids.js';
+import { computeSeverity, routeEscalation } from '../domain/severity.js';
 import { computeRollup, emptyRollup, type RollupOwnInput } from '../domain/rollup.js';
 import { canTransition, reasonRequired } from '../domain/states.js';
 import type {
@@ -370,6 +371,336 @@ export class PurviewService {
   }
 
   // -------------------------------------------------------------------------
+  // Escalations (spec §1.4, §3; journeys J3 and J5)
+  // -------------------------------------------------------------------------
+
+  private readonly timers = new Map<string, NodeJS.Timeout>();
+  private readonly waiters = new Map<string, (outcome: EscalateOutcome) => void>();
+  private readonly interruptLog = new Map<PrincipalId, number[]>();
+  private readonly flushedDigestIds = new Set<string>();
+
+  /**
+   * Raise an escalation. Severity and routing are computed server-side; with
+   * `blocking: true` the returned promise long-polls until an answer or
+   * `timeout_at`, so the agent can branch deterministically on the outcome.
+   */
+  async escalate(
+    args: EscalateArgs,
+    actor: Principal,
+  ): Promise<{ escalation: Escalation; outcome: EscalateOutcome | null }> {
+    const item = this.mustGet(args.work_item_id);
+    const options = args.options ?? [];
+    if (!args.question) throw new Error('question is required');
+    if (!args.context_summary || args.context_summary.length > 280) {
+      throw new Error('context_summary is required and must be at most 280 characters');
+    }
+    if ((args.kind === 'approval' || args.kind === 'decision') && options.length === 0) {
+      throw new Error(`${args.kind} escalations need at least one option`);
+    }
+    if (options.length > 5) {
+      throw new Error('at most 5 options: a human must resolve this from a lock screen');
+    }
+
+    const root = this.mustGet(item.root_id);
+    const now = this.now();
+    const severity = computeSeverity({
+      blast_radius: item.blast_radius,
+      confidence: item.confidence,
+      deadline: parseDate(item.deadline ?? root.deadline),
+      now,
+      root_priority: root.priority,
+    });
+    const target = this.humanFor(item);
+    const { band } = routeEscalation(
+      severity,
+      target.attention,
+      this.interruptsUsed(target.id, now),
+      now,
+    );
+    if (band === 'queued') this.recordInterrupt(target.id, now);
+
+    const timeoutSeconds = args.timeout_seconds ?? 1800;
+    const timeoutAction =
+      args.timeout_action ??
+      (item.blast_radius === 'irreversible' || item.blast_radius === 'costly'
+        ? 'abort'
+        : 'proceed');
+
+    const escalation: Escalation = {
+      id: newId('esc'),
+      work_item_id: item.id,
+      kind: args.kind,
+      raised_by_id: actor.id,
+      question: args.question,
+      options,
+      context_summary: args.context_summary,
+      severity,
+      routed_to_id: target.id,
+      routing: band,
+      timeout_at: new Date(now.getTime() + timeoutSeconds * 1000).toISOString(),
+      timeout_action: timeoutAction,
+      created_at: now.toISOString(),
+      resolved_at: null,
+      resolved_by_id: null,
+      resolution: null,
+      chosen_option_id: null,
+      free_text: null,
+    };
+    this.store.putEscalation(escalation);
+    this.appendEntry(item.id, 'escalation', args.question, actor, {
+      escalation_id: escalation.id,
+      kind: args.kind,
+      options,
+      severity,
+      routing: band,
+    });
+
+    if (args.kind === 'approval' && canTransition(item.state, 'awaiting_approval')) {
+      this.setState(item.id, 'awaiting_approval', null, actor);
+    }
+
+    if (band !== 'digest') {
+      await this.notify((b) => b.postEscalation(escalation, item));
+    }
+    this.scheduleTimeout(escalation.id, timeoutSeconds);
+
+    if (!args.blocking) return { escalation, outcome: null };
+
+    const outcome = await new Promise<EscalateOutcome>((resolve) => {
+      this.waiters.set(escalation.id, resolve);
+    });
+    const resolved = this.store.getEscalation(escalation.id) ?? escalation;
+    return { escalation: resolved, outcome };
+  }
+
+  /** A human (or delegate) answers. One tap: option id, optional free text. */
+  resolveEscalation(
+    escalation_id: string,
+    args: { chosen_option_id?: string | null; free_text?: string | null; resolver: Principal },
+  ): Escalation {
+    const escalation = this.mustGetEscalation(escalation_id);
+    if (escalation.resolved_at) {
+      throw new Error(`escalation ${escalation_id} is already resolved`);
+    }
+    const chosen = args.chosen_option_id ?? null;
+    if (chosen && !escalation.options.some((o) => o.id === chosen)) {
+      throw new Error(`unknown option ${chosen} for escalation ${escalation_id}`);
+    }
+    const now = this.now();
+    escalation.resolved_at = now.toISOString();
+    escalation.resolved_by_id = args.resolver.id;
+    escalation.resolution = 'answered';
+    escalation.chosen_option_id = chosen;
+    escalation.free_text = args.free_text ?? null;
+    this.store.putEscalation(escalation);
+
+    const chosenLabel = escalation.options.find((o) => o.id === chosen)?.label;
+    this.appendEntry(
+      escalation.work_item_id,
+      'decision',
+      chosenLabel ?? args.free_text ?? 'resolved',
+      args.resolver,
+      {
+        escalation_id: escalation.id,
+        question: escalation.question,
+        options_shown: escalation.options,
+        chosen_option_id: chosen,
+        free_text: escalation.free_text,
+      },
+    );
+    this.unblockAfterResolution(escalation, args.resolver);
+    void this.notify((b) => b.postResolution(escalation));
+    this.settle(escalation);
+    return escalation;
+  }
+
+  /** Digest-band escalations not yet delivered (deferred, never dropped). */
+  pendingDigest(): Escalation[] {
+    return this.store
+      .openEscalations()
+      .filter((e) => e.routing === 'digest' && !this.flushedDigestIds.has(e.id));
+  }
+
+  async flushDigest(): Promise<void> {
+    const pending = this.pendingDigest();
+    if (pending.length === 0) return;
+    await this.notify((b) => b.postDigest(pending));
+    for (const e of pending) this.flushedDigestIds.add(e.id);
+  }
+
+  /** Cancel outstanding timers (server shutdown, test teardown). */
+  shutdown(): void {
+    for (const t of this.timers.values()) clearTimeout(t);
+    this.timers.clear();
+  }
+
+  private scheduleTimeout(escalation_id: string, timeoutSeconds: number): void {
+    const timer = setTimeout(() => this.handleTimeout(escalation_id), timeoutSeconds * 1000);
+    timer.unref?.();
+    this.timers.set(escalation_id, timer);
+  }
+
+  /** J5: nobody answered. The declared timeout_action fires; nothing is silently lost. */
+  private handleTimeout(escalation_id: string): void {
+    const escalation = this.store.getEscalation(escalation_id);
+    if (!escalation || escalation.resolved_at) return;
+    const now = this.now();
+    escalation.resolved_at = now.toISOString();
+    escalation.resolved_by_id = null;
+    escalation.resolution = 'timed_out';
+    this.store.putEscalation(escalation);
+
+    // The timeout is recorded as a decision with no human author.
+    this.appendEntry(
+      escalation.work_item_id,
+      'decision',
+      `escalation timed out; timeout_action=${escalation.timeout_action}`,
+      this.systemPrincipal,
+      {
+        escalation_id: escalation.id,
+        question: escalation.question,
+        options_shown: escalation.options,
+        timeout_action: escalation.timeout_action,
+      },
+    );
+
+    const item = this.store.getWorkItem(escalation.work_item_id);
+    if (item) {
+      switch (escalation.timeout_action) {
+        case 'abort':
+          if (canTransition(item.state, 'failed')) {
+            this.setState(item.id, 'failed', 'escalation timed out (timeout_action=abort)', this.systemPrincipal);
+          }
+          break;
+        case 'proceed':
+          if (item.state === 'awaiting_approval') {
+            this.setState(item.id, 'running', null, this.systemPrincipal);
+          }
+          break;
+        case 'escalate_up': {
+          const current = escalation.routed_to_id
+            ? this.store.getPrincipal(escalation.routed_to_id)
+            : undefined;
+          const next =
+            (current?.attention?.auto_delegate_to &&
+              this.store.getPrincipal(current.attention.auto_delegate_to)) ||
+            (current?.delegated_by && this.store.getPrincipal(current.delegated_by)) ||
+            this.defaultHuman;
+          this.reRaise(escalation, next);
+          break;
+        }
+        case 'fallback_owner': {
+          const root = this.store.getWorkItem(item.root_id);
+          const target = root ? this.humanFor(root) : this.defaultHuman;
+          this.reRaise(escalation, target);
+          break;
+        }
+      }
+    }
+
+    void this.notify((b) => b.postResolution(escalation));
+    this.settle(escalation);
+  }
+
+  /** Re-raise a timed-out escalation to a new human, preserving the question. */
+  private reRaise(original: Escalation, target: Principal): void {
+    const now = this.now();
+    const durationMs =
+      new Date(original.timeout_at).getTime() - new Date(original.created_at).getTime();
+    const next: Escalation = {
+      ...original,
+      id: newId('esc'),
+      routed_to_id: target.id,
+      created_at: now.toISOString(),
+      timeout_at: new Date(now.getTime() + durationMs).toISOString(),
+      resolved_at: null,
+      resolved_by_id: null,
+      resolution: null,
+      chosen_option_id: null,
+      free_text: null,
+    };
+    this.store.putEscalation(next);
+    const item = this.store.getWorkItem(original.work_item_id);
+    if (item) void this.notify((b) => b.postEscalation(next, item));
+    this.scheduleTimeout(next.id, durationMs / 1000);
+  }
+
+  /** An answered approval unblocks the item, unless another approval is still open on it. */
+  private unblockAfterResolution(escalation: Escalation, resolver: Principal): void {
+    if (escalation.kind !== 'approval') return;
+    const item = this.store.getWorkItem(escalation.work_item_id);
+    if (!item || item.state !== 'awaiting_approval') return;
+    const stillOpen = this.store
+      .openEscalations()
+      .some((e) => e.work_item_id === item.id && e.kind === 'approval');
+    if (!stillOpen) this.setState(item.id, 'running', null, resolver);
+  }
+
+  /** Wake a blocking caller and drop the timer. */
+  private settle(escalation: Escalation): void {
+    const timer = this.timers.get(escalation.id);
+    if (timer) {
+      clearTimeout(timer);
+      this.timers.delete(escalation.id);
+    }
+    const waiter = this.waiters.get(escalation.id);
+    if (waiter) {
+      this.waiters.delete(escalation.id);
+      const waited =
+        (new Date(escalation.resolved_at ?? escalation.created_at).getTime() -
+          new Date(escalation.created_at).getTime()) /
+        1000;
+      waiter({
+        resolution: escalation.resolution ?? 'withdrawn',
+        chosen_option_id: escalation.chosen_option_id,
+        free_text: escalation.free_text,
+        resolved_by: escalation.resolved_by_id,
+        waited_seconds: Math.round(waited),
+      });
+    }
+  }
+
+  /** Walk from the item's owner up the delegation chain to the accountable human. */
+  private humanFor(item: WorkItem): Principal {
+    let p = item.owner_id ? this.store.getPrincipal(item.owner_id) : undefined;
+    while (p && p.kind !== 'human') {
+      p = p.delegated_by ? this.store.getPrincipal(p.delegated_by) : undefined;
+    }
+    return p ?? this.defaultHuman;
+  }
+
+  private interruptsUsed(principalId: PrincipalId, now: Date): number {
+    const log = this.interruptLog.get(principalId) ?? [];
+    const cutoff = now.getTime() - 3_600_000;
+    const recent = log.filter((t) => t > cutoff);
+    this.interruptLog.set(principalId, recent);
+    return recent.length;
+  }
+
+  private recordInterrupt(principalId: PrincipalId, now: Date): void {
+    const log = this.interruptLog.get(principalId) ?? [];
+    log.push(now.getTime());
+    this.interruptLog.set(principalId, log);
+  }
+
+  private mustGetEscalation(id: string): Escalation {
+    const e = this.store.getEscalation(id);
+    if (!e) throw new Error(`unknown escalation: ${id}`);
+    return e;
+  }
+
+  private async notify(fn: (b: EscalationBridge) => Promise<void>): Promise<void> {
+    if (!this.bridge) return;
+    try {
+      await fn(this.bridge);
+    } catch (err) {
+      // Delivery failure must never take down the write path; the escalation
+      // is still in the store and the owner's queue.
+      console.error('escalation bridge delivery failed:', err);
+    }
+  }
+
+  // -------------------------------------------------------------------------
   // Internals
   // -------------------------------------------------------------------------
 
@@ -439,3 +770,27 @@ export type {
   EscalationResolution,
   TimeoutAction,
 };
+
+export interface EscalateArgs {
+  work_item_id: WorkItemId;
+  kind: EscalationKind;
+  question: string;
+  options?: EscalationOption[];
+  context_summary: string;
+  blocking?: boolean;
+  timeout_seconds?: number;
+  timeout_action?: TimeoutAction;
+}
+
+/** What a blocking `work.escalate` returns; the agent branches on `resolution`. */
+export interface EscalateOutcome {
+  resolution: EscalationResolution;
+  chosen_option_id: string | null;
+  free_text: string | null;
+  resolved_by: PrincipalId | null;
+  waited_seconds: number;
+}
+
+function parseDate(iso: string | null): Date | null {
+  return iso ? new Date(iso) : null;
+}
