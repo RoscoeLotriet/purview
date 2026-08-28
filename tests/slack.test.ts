@@ -105,7 +105,7 @@ describe('escalationBlocks', () => {
     const json = JSON.stringify(blocks);
     expect(json).toContain('Send the revised quote to the client?');
     expect(json).toContain('Rebuilt pricing after the bureau change');
-    const actions = blocks.find((b) => b.type === 'actions') as { elements: unknown[] };
+    const actions = blocks.find((b) => b.type === 'actions') as unknown as { elements: unknown[] };
     expect(actions.elements).toHaveLength(2);
     expect(json).toContain('resolve:esc_11112222:send');
     expect(json).toContain('resolve:esc_11112222:hold');

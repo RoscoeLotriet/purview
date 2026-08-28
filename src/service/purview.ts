@@ -370,6 +370,12 @@ export class PurviewService {
     throw new Error('query requires work_item_id or principal_id');
   }
 
+  /** Read a work item's transcript, optionally filtered by entry kind. */
+  transcript(work_item_id: WorkItemId, kinds?: EntryKind[]): TranscriptEntry[] {
+    this.mustGet(work_item_id);
+    return this.store.entries(work_item_id, kinds);
+  }
+
   // -------------------------------------------------------------------------
   // Escalations (spec §1.4, §3; journeys J3 and J5)
   // -------------------------------------------------------------------------
