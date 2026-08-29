@@ -106,7 +106,7 @@ child process, with flakiness to be treated as a verdict rather than patched. Se
 - disposition: ready-to-spec
 - source: https://github.com/RoscoeLotriet/purview/issues/12
 - load_bearing: false
-- notes: surfaced by FQ-3 gate 3. `src/service/purview.ts:727-738` swallows every bridge failure, so a misconfigured webhook and a failed product premise produce the same dashboard — the confound that undermines the step-1 readout. Open decisions include whether delivery failure should change behaviour, not just be observable; today a timeout fires as if a human saw the card and ignored it.
+- notes: surfaced by FQ-3 gate 3. `src/service/purview.ts:727-736` swallows every bridge failure, so a misconfigured webhook and a failed product premise produce the same dashboard — the confound that undermines the step-1 readout. Open decisions include whether delivery failure should change behaviour, not just be observable; today a timeout fires as if a human saw the card and ignored it.
 
 ---
 

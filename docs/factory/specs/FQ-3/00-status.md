@@ -32,7 +32,7 @@ Promote a slice to `factory:ready-to-implement` when its blocker merges.
 
 ## Standing instruction from gate 3
 
-Seven tests in slice 2 spawn the real entrypoint as a child process. If they need retries or
+Six tests in slice 2 (6–11) spawn the real entrypoint as a child process; test 25 in slice 5 is the seventh. If they need retries or
 sleeps beyond a single `EADDRINUSE` retry to stay green, that is a verdict that the entrypoint
 is not testable as written: stop and file the `src/` config-extraction issue rather than
 adding a retry.

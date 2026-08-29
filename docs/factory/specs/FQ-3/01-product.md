@@ -21,9 +21,10 @@ crash, no error, no red anything. Escalations are still raised. Nobody ever sees
 all resolve by timeout at the half-hour mark. Latency reads as ~30 minutes and the timeout
 rate goes vertical.
 
-That is *exactly* the signature §7 tells the reader to interpret as "severity routing
-doesn't work, this product's premise is wrong." A plumbing mistake and a dead product
-premise produce the same dashboard.
+That is *exactly* the signature §7 tells the reader to read as a routing failure — which,
+given that severity-based interrupt routing is one of the two things §9 names as this
+product's defensible core, is functionally a verdict on the premise. A plumbing mistake and a
+dead product premise produce the same dashboard.
 
 **The person's problem: they cannot currently tell the difference between a negative result
 and a broken instrument, and they are about to bet the next three build steps on being able

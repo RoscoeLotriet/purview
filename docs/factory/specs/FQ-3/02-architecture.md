@@ -87,7 +87,7 @@ Numbered because the ordering is the assertion:
 6. The service posts the card: real `fetch` from `SlackBridge` to the fake. The fake records it.
 7. The test reads the `action_id` out of the recorded Block Kit payload — `resolve:<escalation_id>:<option_id>` — which is the only place the escalation id crosses the seam. Parsing it *from the card* rather than from the tool result is deliberate: it proves the card carries a resolvable identity.
 8. The test form-encodes a `block_actions` payload with that `action_id` and a `response_url` on the fake, signs it v0, POSTs to `/slack/interactions`.
-9. The endpoint acks 200 **before doing the work** (`src/http/app.ts:91` — "Acknowledge fast; Slack expects a response within 3 seconds").
+9. The endpoint acks 200 **before doing the work** (`src/http/app.ts:89` — "Acknowledge fast; Slack expects a response within 3 seconds").
 10. Resolution wakes the waiter; the held promise from step 5 resolves with the chosen option.
 11. `postResolution` fires at the fake's `response_url`; the fake records a `replace_original: true` card.
 

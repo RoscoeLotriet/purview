@@ -4,7 +4,7 @@ Gate 2 approved as written 2026-08-29. CI filed separately.
 
 ## A finding that changes what gap 3 can claim
 
-`PurviewService.notify` (`src/service/purview.ts:727-738`) swallows every bridge failure:
+`PurviewService.notify` (`src/service/purview.ts:727-736`) swallows every bridge failure:
 
 ```ts
 } catch (err) {
@@ -176,29 +176,29 @@ TEST                     client.callTool('work_escalate', { blocking: true })
      └ app.post('/mcp')                        src/http/app.ts:29
         └ buildMcpServer(service, principal)   src/mcp/server.ts   ← new per POST
            └ StreamableHTTPServerTransport.handleRequest
-              └ tool handler 'work_escalate'   src/mcp/server.ts:180
+              └ tool handler 'work_escalate'   src/mcp/server.ts:177
                  └ PurviewService.escalate     src/service/purview.ts:404
                     ├ store.putEscalation
                     ├ waiters.set(id, resolve)      :482-486   ← agent parks here
                     ├ notify(postEscalation)        :489
-                    │  └ SlackBridge.postEscalation src/slack/bridge.ts:23
+                    │  └ SlackBridge.postEscalation src/slack/bridge.ts:22
                     │     └ fetch(webhookUrl)       :55        ← real socket
                     │        └ SLACK FAKE records the card
                     └ scheduleTimeout(id, secs)     :491
 
 TEST                     reads action_id off the recorded card
                          POST /slack/interactions (signed)
-  └ app.post('/slack/interactions')            src/http/app.ts:69
+  └ app.post('/slack/interactions')            src/http/app.ts:67
      ├ verifySlackSignature                    src/slack/verify.ts
      ├ res.status(200).send('')                :91  ← acks BEFORE the work
      ├ parseInteraction                        src/slack/interactions.ts:14
      ├ PurviewService.resolveEscalation        src/service/purview.ts:500
-     │  └ wake waiter                          :674  ← agent's promise resolves
+     │  └ wake waiter                          :675  ← agent's promise resolves
      └ SlackBridge.postResolution              src/slack/bridge.ts:33
         └ fetch(response_url)                  ← SLACK FAKE records the replacement
 ```
 
-The two arrows that matter: the agent parks at `:482` and wakes at `:674`, and everything
+The two arrows that matter: the agent parks at `:482` and wakes at `:675`, and everything
 between them crosses a real socket twice. No existing test spans that.
 
 ## Test list
@@ -231,7 +231,7 @@ between them crosses a real socket twice. No existing test spans that.
 | # | Test | Proves / fails if |
 |---|---|---|
 | 12 | the card arrives as Block Kit with one button per option and `content-type: application/json` | The real outbound request shape over a socket. Fails if block rendering and delivery disagree — the two are separately tested today and never compared. |
-| 13 | a Slack 500 on the card does **not** fail the agent's `escalate` call | Characterization of the deliberate swallow at `:727-738`. |
+| 13 | a Slack 500 on the card does **not** fail the agent's `escalate` call | Characterization of the deliberate swallow at `:727-736`. |
 | 14 | after a Slack 500, the escalation is still resolvable and still releases the agent | Delivery failure does not corrupt state. |
 | 15 | **a Slack 500 leaves no observable signal on the escalation** | The blind spot, asserted. The test the follow-up issue flips. See the finding above. |
 | 16 | low-severity escalations batch into a digest rather than posting individually | Band routing reaches the bridge by a different path. |

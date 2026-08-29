@@ -92,7 +92,7 @@ beyond slice 0. If a wave-2 item is rejected, slice 4 can be promoted to fill th
 Both were surfaced by this spec and neither belongs inside it:
 
 1. **CI workflow** (gate 2). Nothing runs the gates automatically today. `.github/workflows/**` is load-bearing under Charter §2, so it needs `deep` gates and a human read. Filing as `factory:ready-to-spec`.
-2. **Runtime signal for swallowed Slack deliveries** (gate 3). `src/service/purview.ts:727-738` swallows every bridge failure, leaving no trace but stderr — the structural cause of the gate-1 confound. Needs a delivery outcome on the escalation record, which is a `src/` change and a product decision about what the operator should see. Filing as `factory:ready-to-spec`. **Test 15 is its acceptance test, inverted.**
+2. **Runtime signal for swallowed Slack deliveries** (gate 3). `src/service/purview.ts:727-736` swallows every bridge failure, leaving no trace but stderr — the structural cause of the gate-1 confound. Needs a delivery outcome on the escalation record, which is a `src/` change and a product decision about what the operator should see. Filing as `factory:ready-to-spec`. **Test 15 is its acceptance test, inverted.**
 
 ## What this spec deliberately did not decide
 
