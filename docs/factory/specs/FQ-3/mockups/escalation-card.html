@@ -1,0 +1,92 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>FQ-3 · Slack escalation card — existing states</title>
+<style>
+  body { font: 15px/1.5 -apple-system, "Segoe UI", system-ui, sans-serif;
+         background: #f7f7f8; color: #1d1c1d; margin: 0; padding: 32px; }
+  h1 { font-size: 18px; margin: 0 0 4px; }
+  .note { color: #616061; font-size: 13px; max-width: 60ch; margin: 0 0 28px; }
+  h2 { font-size: 13px; text-transform: uppercase; letter-spacing: .04em;
+       color: #616061; margin: 32px 0 8px; }
+  h2 .src { text-transform: none; letter-spacing: 0; font-weight: 400; color: #868686; }
+  .card { background: #fff; border: 1px solid #e0e0e0; border-radius: 8px;
+          padding: 16px; max-width: 560px; }
+  .card > * + * { margin-top: 12px; }
+  .q { font-weight: 700; }
+  .ctx { color: #616061; font-size: 13px; }
+  .meta { color: #868686; font-size: 12px; }
+  code { background: #f0f0f0; border-radius: 3px; padding: 1px 4px;
+         font: 12px ui-monospace, Menlo, monospace; }
+  .btns { display: flex; gap: 8px; flex-wrap: wrap; }
+  button { font: 500 14px inherit; background: #fff; border: 1px solid #bbb;
+           border-radius: 4px; padding: 8px 14px; cursor: default; }
+  button.primary { background: #007a5a; border-color: #007a5a; color: #fff; }
+  .outcome { font-weight: 500; }
+  .hdr { font-weight: 700; font-size: 17px; }
+  .divider { border: 0; border-top: 1px solid #ececec; margin: 14px 0; }
+</style>
+
+<h1>Slack escalation card — the three states step 1 already produces</h1>
+<p class="note">
+  Documents existing behaviour so the approver can see what the tests will pin. Nothing here
+  is a new design. This is the only human-facing surface in step 1; the "one tap" in the
+  product spec is the button row below.
+</p>
+
+<h2>1 · Open escalation <span class="src">— the card an agent's block produces</span></h2>
+<div class="card">
+  <div class="q">The staging migration will drop the <code>legacy_events</code> table. Proceed?</div>
+  <div class="ctx">
+    Step 4 of 9 in "migrate event pipeline". The table has no reads in 30 days but is
+    referenced by one dashboard owned by another team.
+  </div>
+  <div class="meta">immediate · severity 82% · approval · migrate event pipeline · <code>wi_4f2a91c7</code></div>
+  <div class="btns">
+    <button class="primary">Drop it</button>
+    <button>Keep and rename</button>
+    <button>Stop, I'll look</button>
+  </div>
+</div>
+<p class="note">
+  The agent is blocked in a long poll while this sits unanswered. The clock behind
+  "escalation latency" starts when this posts and stops when a button is tapped — which is
+  why a card that never posts still produces a number.
+</p>
+
+<h2>2 · Resolved <span class="src">— replaces the card in place</span></h2>
+<div class="card">
+  <div class="q">The staging migration will drop the <code>legacy_events</code> table. Proceed?</div>
+  <div class="outcome">✅ Keep and rename</div>
+  <div class="meta">resolved 2026-08-29T09:14:02Z · <code>esc_9b1e33d0</code></div>
+</div>
+<div style="height:12px"></div>
+<div class="card">
+  <div class="q">Retry the flaky integration step a third time?</div>
+  <div class="outcome">⏱ Timed out — <code>proceed</code> applied</div>
+  <div class="meta">resolved 2026-08-29T09:44:00Z · <code>esc_1c7d0a45</code></div>
+</div>
+<p class="note">
+  Both states are indistinguishable in the metrics unless the timeout path is separately
+  observable — the second card is what a misconfigured Slack connection produces for
+  <em>every</em> escalation, silently.
+</p>
+
+<h2>3 · Digest <span class="src">— low-severity, batched</span></h2>
+<div class="card">
+  <div class="hdr">Purview digest — 3 item(s)</div>
+  <hr class="divider">
+  <div class="q">Bump <code>zod</code> to 4.5 in the worker package?</div>
+  <div class="ctx">Minor, no breaking changes listed. Blocks nothing.</div>
+  <div class="btns"><button>Bump it</button><button>Leave it</button></div>
+  <hr class="divider">
+  <div class="q">Doc example still references the removed <code>work_list</code> tool.</div>
+  <div class="outcome">✅ Fix in place</div>
+  <hr class="divider">
+  <div class="q">Fixture directory grew past 50 files — split it?</div>
+  <div class="outcome">⏱ Timed out — <code>defer</code> applied</div>
+</div>
+<p class="note">
+  Resolved entries render as facts without buttons; unresolved ones stay actionable. A
+  digest that silently omits already-resolved timeouts was a real defect found during PR #1
+  verification, which is why the mixed case is drawn here rather than a clean one.
+</p>
