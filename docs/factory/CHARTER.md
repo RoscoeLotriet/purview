@@ -146,10 +146,33 @@ valve. It exists so that a routine cannot grind through a bad assumption at volu
 STOP_IF:
   - Gates were red twice in a row on the same item
   - The fix requires touching a load-bearing path
-  - The change would exceed 400 changed lines
+  - The change would exceed 400 changed lines of code
   - The queue item is ambiguous after one clarification attempt
   - More than 3 items are already awaiting human review
 ```
+
+**The line ceiling counts code only.** Documentation does not count against it and has no
+ceiling of its own. A changed line is documentation if its file matches any of:
+
+```
+DOCS_NOT_COUNTED:
+  - "docs/**"
+  - "**/*.md"
+```
+
+Everything else counts: source, tests, `package.json`, lockfiles, build and tooling config,
+CI workflows. Count it, do not estimate it:
+
+```bash
+git diff --numstat <base>...<head> -- . ':!docs/**' ':!*.md' \
+  | awk '{ a += $1; r += $2 } END { print a + r }'
+```
+
+The ceiling is a limit on how much logic a reviewer can hold at once, and prose is not read
+the way logic is — a reviewer skims a spec by section and cannot skim a diff of control
+flow. That is the whole of the distinction. It is not a claim that long documents are free;
+an oversized spec is a real review burden, it is just not this valve's job. See
+`docs/factory/DECISIONS.md`, 2026-08-30.
 
 The last one is the orchestration-tax limit. The constraint on a factory is not how many
 agents can run, it is how many decisions can be pending your judgment at once. When the
@@ -167,6 +190,6 @@ Constraints set once become either a permanent tax or a permanent hole. Review t
   trusted. Record what the gate missed.
 
 ```
-LAST_REVIEWED: 2026-08-28
+LAST_REVIEWED: 2026-08-30
 NEXT_REVIEW: 2026-09-28
 ```
