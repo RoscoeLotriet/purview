@@ -76,12 +76,28 @@ it('carries an agent through create, claim and escalate over a real MCP connecti
   const read = await agent.readResource({ uri: `workitem://${workItemId}` });
   const [entry] = read.contents;
   if (!entry || !('text' in entry)) throw new Error('workitem resource returned no text content');
-  const stored = JSON.parse(entry.text) as { item: Record<string, unknown> };
+  const stored = JSON.parse(entry.text) as {
+    item: Record<string, unknown>;
+    transcript: Array<Record<string, unknown>>;
+  };
 
   expect(stored.item.id).toBe(workItemId);
   // `claim` sets owner_id and confidence; `escalate(kind:'approval')` then moves
   // the item out of `running`. Both hops are visible in one read.
-  expect(stored.item.owner_id).toBe('scout');
   expect(stored.item.confidence).toBe(0.2);
   expect(stored.item.state).toBe('awaiting_approval');
+
+  // The principal header is a *display name*: /mcp resolves it via ensureAgent,
+  // which mints a principal with a generated id, so owner_id is never 'scout'.
+  // Asserting the chain instead of the string is what actually proves the header
+  // reached the service — the claim entry names the agent, and its author is the
+  // principal that now owns the item.
+  const owner = stored.item.owner_id;
+  expect(owner).toEqual(expect.stringMatching(/^pr_/));
+
+  const claimEntry = stored.transcript.find(
+    (e) => e.kind === 'state_change' && e.body === 'claimed by scout',
+  );
+  expect(claimEntry, 'no state_change entry recorded the claim by scout').toBeDefined();
+  expect(claimEntry?.author_id).toBe(owner);
 });
