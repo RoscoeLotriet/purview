@@ -62,15 +62,27 @@ If you cannot cleanly separate test from implementation, say so and mark the ver
 
 ### 4. Check the test files were not tampered with
 
+Use the charter's `TESTS_PROTECTED` globs, not an approximation of them:
+
 ```bash
-git diff --stat <base-ref>...HEAD -- '*test*' '*spec*'
+git diff --stat <base-ref>...HEAD -- 'tests/**' '*.test.ts' 'vitest.config.ts'
 ```
 
-Any modification to a **pre-existing** test file is a rejection for an unattended run. For
-an interactive run it requires explicit human approval recorded in the PR, remains draft,
-and receives a human read.
+Any modification to a **pre-existing** file matching those globs is a rejection for an
+unattended run. For an interactive run it requires explicit human approval recorded in the
+PR, remains draft, and receives a human read.
 
-New test files are fine.
+New files under those globs are fine — adding is not modifying.
+
+Protection is by path, not by whether the file contains assertions: a harness helper under
+`tests/` and the runner config are covered for the reason given in Charter §3. Read the diff
+of a helper as carefully as a diff of an assertion.
+
+This check previously used `'*test*' '*spec*'`. Both were wrong in ways worth knowing:
+`*test*` crosses `/` and so caught `tests/**` and `vitest.config.ts` by accident rather than
+by rule, and `*spec*` matched `docs/factory/specs/**`, so every spec PR tripped a tamper
+check that had nothing to tamper with. A gate that fires on work you are meant to approve
+teaches you to wave it through.
 
 ### 5. Check scope
 

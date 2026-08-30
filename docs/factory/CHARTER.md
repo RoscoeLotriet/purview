@@ -64,14 +64,29 @@ has no constraints at all.
 
 ```
 TESTS_ARE_LOAD_BEARING: true
+
+TESTS_PROTECTED:
+  - "tests/**"
+  - "**/*.test.ts"
+  - "vitest.config.ts"
 ```
 
-When true, an unattended run may not modify an existing test file. An interactive session
-may do so only after explicit human approval, and the resulting draft PR requires a human
-read even when every gate is green. Agents routinely rewrite assertions to match broken
-behavior, so an unexplained green suite after an agent edited the tests is weak evidence.
+When true, an unattended run may not modify an existing file matching `TESTS_PROTECTED`. An
+interactive session may do so only after explicit human approval, and the resulting draft PR
+requires a human read even when every gate is green. Agents routinely rewrite assertions to
+match broken behavior, so an unexplained green suite after an agent edited the tests is weak
+evidence.
 
-Adding a *new* test file is not covered by this rule.
+**Protection is by path, not by whether the file contains assertions.** A helper under
+`tests/` — a harness, a fixture, a port allocator — is protected, and so is the runner
+config. That is where a test-defeating change hides best: a reviewer scanning a diff for
+rewritten assertions will not notice an `awaitCondition` that returns early, a harness that
+constructs a stub, or a `vitest.config.ts` `include` that quietly drops a whole project from
+the suite. Each of those leaves the suite green while it stops proving anything.
+
+Adding a *new* file under these globs is not a modification and is not covered by this rule.
+The way a slice stays unattended is to add files rather than edit them; see
+`docs/factory/specs/FQ-3/04-slices.md` for the pattern.
 
 ---
 
