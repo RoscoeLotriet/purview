@@ -14,7 +14,7 @@ Slice 0 was approved at "~330 lines estimated, closest to the ceiling". Implemen
 diff measured **515 lines** — 56% over the estimate and 29% over the charter ceiling. The work
 was correct. The sizing was not.
 
-Measured, from `origin/claude/fq-5`:
+Measured, from `archive/fq-5-slice0-original`:
 
 | File | Lines |
 |---|---|
@@ -55,7 +55,7 @@ It now gets its own file.
 
 ## Slices
 
-Line figures are marked **measured** (the file exists and passes on `origin/claude/fq-5`) or
+Line figures are marked **measured** (the file exists and passes on `archive/fq-5-slice0-original`) or
 *estimated*. Estimates in this document have a known failure mode; see the note after the
 table.
 
@@ -67,7 +67,7 @@ The tracer bullet through the MCP seam. Real socket, real client, real transport
   `tests/integration/mcp-round-trip.integration.test.ts`
 - **Modified:** `package.json` (scripts), `vitest.config.ts` (projects)
 - **Reuse:** `ports.ts` (23, measured), `wait.ts` (52, measured), `vitest.config.ts` (26,
-  measured) and `package.json` (2, measured) land unchanged from `origin/claude/fq-5`.
+  measured) and `package.json` (2, measured) land unchanged from `archive/fq-5-slice0-original`.
   `purview.ts` lands amended per gate 3 amendment 1 (~100, from 108 measured).
 - **New test** (~50, *estimated*): one test driving `work_create` → `work_claim` →
   `work_escalate({ blocking: false })` over a real MCP `Client` on
@@ -88,7 +88,7 @@ The Slack seam, and the tracer bullet completed. This is revision 1's test 1, in
 - **New files:** `tests/integration/harness/{sign,slack-fake,tap}.ts`,
   `tests/integration/escalation-round-trip.integration.test.ts`
 - **Reuse:** `sign.ts` (67, measured), `slack-fake.ts` (141, measured) and the round-trip test
-  (96, measured) land unchanged from `origin/claude/fq-5`. `tap.ts` is new (~25, *estimated*),
+  (96, measured) land unchanged from `archive/fq-5-slice0-original`. `tap.ts` is new (~25, *estimated*),
   carrying the logic lifted out of `PurviewHarness.tap`.
 - **done_when:** the test injects a `SlackFake` into `startHarness`, drives `work_create` →
   `work_claim` → `work_escalate({ blocking: true })` and **holds the promise**; reads the
@@ -200,7 +200,7 @@ is a constraint, not a suggestion. Revision 1 had three waves; the 0a/0b split a
 If a wave-3 item is rejected, slice 4 can be promoted to fill the gap (see its note — most of
 it needs only 0a).
 
-## What happens to `origin/claude/fq-5`
+## What happens to `archive/fq-5-slice0-original`
 
 It stays. It is green, it is correct, and 507 of its 515 lines are reused verbatim or nearly
 so across 0a and 0b. It is a source branch to cherry-pick from, not work to redo. **It must

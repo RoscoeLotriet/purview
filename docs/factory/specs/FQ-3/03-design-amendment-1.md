@@ -115,5 +115,39 @@ risks nothing that is not already on the table.
 
 ---
 
-**STOP — gate 3 amendment awaiting approval.** Gate 4 is drafted against it but is a
-separate approval.
+**Approved 2026-08-30.** Gate 4 revision 2 was approved separately.
+
+---
+
+## Correction, 2026-08-30 — added after implementation, not part of the approved text
+
+The approved text above says `slack?: SlackFake`, "imported as a type only, so `purview.ts`
+carries no runtime dependency on `slack-fake.ts` and slice 0a compiles without it."
+
+**That does not compile.** A type-only import still requires the module to resolve, and
+`slack-fake.ts` does not land until slice 0b. Implementation run
+`2026-08-30T174947Z-implement-5` hit it; the verifier confirmed it independently by compiling
+a probe containing `import type { SlackFake } from './slack-fake.js'`, which produced
+`error TS2307: Cannot find module './slack-fake.js'`.
+
+Implemented instead as a structural interface declared in `harness/purview.ts`:
+
+```ts
+export interface SlackTarget {
+  readonly webhookUrl: string;
+}
+```
+
+`webhookUrl` is the only member the harness uses. Slice 0b's `SlackFake` declares it, so it
+satisfies `SlackTarget` structurally with no import in either direction — which reaches this
+amendment's stated goal more completely than an `import type` would.
+
+**Consequence for slice 0b (#18), which must not be missed.** `PurviewHarness.slack` is now
+`SlackTarget | undefined`, so the archived test's `harness.slack.awaitPost(...)` and
+`harness.slack.responseUrl(...)` will not typecheck through the harness. Slice 0b's test must
+use its own reference to the fake it started — which is what this amendment intends anyway,
+since whoever starts the fake owns it.
+
+This correction is recorded rather than folded into the approved text above, because the text
+above is what a human approved. A human should confirm this substitution before #18 is
+implemented against it.

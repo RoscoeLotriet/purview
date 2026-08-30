@@ -29,24 +29,32 @@ of the same day (#16). Live labels are the source of truth._
 
 This run re-cut FQ-3's slice 0 after an implementation attempt measured it at 515 changed
 lines against Charter §7's 400-line ceiling. Gate 3 amendment 1 and gate 4 revision 2 were
-both approved by a human on 2026-08-30. **FQ-5 is claimable again**, now scoped to the
-harness core and the MCP tracer; the Slack half is the new FQ-18.
+both approved by a human on 2026-08-30. The Slack half is the new FQ-18.
 
-Counts: ready-to-implement=1 (#5), ready-to-spec=2 (#11, #12), needs-info=0,
+**FQ-5 was claimed and is now `needs-info`, not claimable.** Implementation run
+`2026-08-30T174947Z-implement-5` claimed it, went red twice under Charter §7 and stopped; a
+stop hook then prompted a resumption that no human authorized. The resumed work is green on
+branch `claude/fq-5` and the verifier proved the test correct by mutation, but rejected the
+run over its records and the missing authorization. A human owes a decision: ratify the
+resumption or discard it. See `docs/factory/runs/2026-08-30T180514Z-implement-5-resumed.md`.
+
+Counts: ready-to-implement=0, ready-to-spec=2 (#11, #12), needs-info=1 (#5),
 wait-to-implement=7 (#3, #6, #7, #8, #9, #10, #18).
 
 ## Claimable now
 
+_(none — #5 is parked on a human decision; everything else is blocked on it)_
+
 ## FQ-5: integration slice 0a — harness core and the MCP tracer
-- disposition: ready-to-implement
+- disposition: needs-info · **blocked on a human decision, see above**
 - source: https://github.com/RoscoeLotriet/purview/issues/5
 - parent: #3 · spec: `docs/factory/specs/FQ-3/` (gate 4 revision 2)
 - files_expected: tests/integration/harness/{ports,wait,purview}.ts, tests/integration/mcp-round-trip.integration.test.ts, package.json, vitest.config.ts
 - load_bearing: false
 - gate_level: full
-- done_when: `pnpm test` runs both vitest projects and is what the gates script invokes; `pnpm test:unit` runs unit only; one integration test drives create → claim → escalate(non-blocking) over a real MCP client on a real socket; `startHarness` matches gate 3 amendment 1 (injected `SlackFake`, type-only import, no `tap()`); nothing under `src/` modified
+- done_when: `pnpm test` runs both vitest projects and is what the gates script invokes; `pnpm test:unit` runs unit only; one integration test drives create → claim → escalate(non-blocking) over a real MCP client on a real socket; `startHarness` matches gate 3 amendment 1 (injected Slack fake, no `tap()`) — note the amendment's "type-only import" spelling cannot compile in this slice and was implemented as a structural interface instead, see the correction in `03-design-amendment-1.md`; nothing under `src/` modified
 - confidence: high
-- notes: ~253 lines, 203 of them measured on `origin/claude/fq-5` — cherry-pick, do not rewrite. Blocks everything else in FQ-3. `pnpm test` must run integration too: the gates script invokes exactly `pnpm test` and there is no CI (#11), so a separate script would gate nothing.
+- notes: ~253 lines, 203 of them measured on `archive/fq-5-slice0-original` — cherry-pick, do not rewrite. Blocks everything else in FQ-3. `pnpm test` must run integration too: the gates script invokes exactly `pnpm test` and there is no CI (#11), so a separate script would gate nothing.
 
 ---
 
@@ -144,7 +152,12 @@ git diff --numstat origin/main...HEAD -- . ':!docs/**' ':!*.md' \
 
 Over 400: stop and split. Do not trim tests to fit.
 
-## Do not merge `origin/claude/fq-5`
+## Do not merge `archive/fq-5-slice0-original`
 
 It is green and 507 of its 515 lines are reused across #5 and #18, but it *is* the 515-line
-diff the ceiling stopped. It is a cherry-pick source. Close it once #18 merges.
+diff the ceiling stopped. It is a cherry-pick source only.
+
+It was originally pushed as `claude/fq-5`. That name is the deterministic claim ref the
+contract requires, and holding it would have deadlocked the item — no later run could ever
+win the claim. It was archived to this name at the identical SHA and the claim name freed.
+Delete the archive once #18 merges.
