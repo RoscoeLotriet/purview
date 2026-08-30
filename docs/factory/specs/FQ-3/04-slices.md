@@ -14,7 +14,7 @@ Slice 0 was approved at "~330 lines estimated, closest to the ceiling". Implemen
 diff measured **515 lines** — 56% over the estimate and 29% over the charter ceiling. The work
 was correct. The sizing was not.
 
-Measured, from `origin/claude/fq-5`:
+Measured, from `archive/fq-5-slice0-original`:
 
 | File | Lines |
 |---|---|
@@ -55,7 +55,7 @@ It now gets its own file.
 
 ## Slices
 
-Line figures are marked **measured** (the file exists and passes on `origin/claude/fq-5`) or
+Line figures are marked **measured** (the file exists and passes on `archive/fq-5-slice0-original`) or
 *estimated*. Estimates in this document have a known failure mode; see the note after the
 table.
 
@@ -67,7 +67,7 @@ The tracer bullet through the MCP seam. Real socket, real client, real transport
   `tests/integration/mcp-round-trip.integration.test.ts`
 - **Modified:** `package.json` (scripts), `vitest.config.ts` (projects)
 - **Reuse:** `ports.ts` (23, measured), `wait.ts` (52, measured), `vitest.config.ts` (26,
-  measured) and `package.json` (2, measured) land unchanged from `origin/claude/fq-5`.
+  measured) and `package.json` (2, measured) land unchanged from `archive/fq-5-slice0-original`.
   `purview.ts` lands amended per gate 3 amendment 1 (~100, from 108 measured).
 - **New test** (~50, *estimated*): one test driving `work_create` → `work_claim` →
   `work_escalate({ blocking: false })` over a real MCP `Client` on
@@ -76,8 +76,17 @@ The tracer bullet through the MCP seam. Real socket, real client, real transport
   is constructed — the configuration test 9 declares supported.
 - **done_when:** `pnpm test` runs both the `unit` and `integration` projects and is what the
   gates script invokes; `pnpm test:unit` runs unit only; the round-trip test passes on a real
-  socket; `startHarness` matches the amended contract and imports `SlackFake` as a type only;
-  no file under `src/` and no pre-existing test file modified.
+  socket; `startHarness` matches the amended contract, taking an injected Slack fake and
+  constructing no `SlackBridge` when none is given; no file under `src/` and no pre-existing
+  test file modified.
+
+  **Corrected 2026-08-30.** This clause previously read "imports `SlackFake` as a type only",
+  which is unsatisfiable: a type-only import still requires the module to resolve, and
+  `slack-fake.ts` does not land until slice 0b, so it yields `TS2307`. Confirmed by two
+  independent verifier contexts compiling a probe. The harness declares a structural
+  `SlackTarget { readonly webhookUrl: string }` instead, which 0b's `SlackFake` satisfies by
+  shape — reaching the clause's stated goal, no dependency on `slack-fake.ts`, more completely
+  than an `import type` could. See `03-design-amendment-1.md`.
 - **Total: ~253** · **gate_level:** full · **confidence:** high (203 of it measured)
 - **Blocks:** every other slice.
 
@@ -88,7 +97,7 @@ The Slack seam, and the tracer bullet completed. This is revision 1's test 1, in
 - **New files:** `tests/integration/harness/{sign,slack-fake,tap}.ts`,
   `tests/integration/escalation-round-trip.integration.test.ts`
 - **Reuse:** `sign.ts` (67, measured), `slack-fake.ts` (141, measured) and the round-trip test
-  (96, measured) land unchanged from `origin/claude/fq-5`. `tap.ts` is new (~25, *estimated*),
+  (96, measured) land unchanged from `archive/fq-5-slice0-original`. `tap.ts` is new (~25, *estimated*),
   carrying the logic lifted out of `PurviewHarness.tap`.
 - **done_when:** the test injects a `SlackFake` into `startHarness`, drives `work_create` →
   `work_claim` → `work_escalate({ blocking: true })` and **holds the promise**; reads the
@@ -200,7 +209,7 @@ is a constraint, not a suggestion. Revision 1 had three waves; the 0a/0b split a
 If a wave-3 item is rejected, slice 4 can be promoted to fill the gap (see its note — most of
 it needs only 0a).
 
-## What happens to `origin/claude/fq-5`
+## What happens to `archive/fq-5-slice0-original`
 
 It stays. It is green, it is correct, and 507 of its 515 lines are reused verbatim or nearly
 so across 0a and 0b. It is a source branch to cherry-pick from, not work to redo. **It must

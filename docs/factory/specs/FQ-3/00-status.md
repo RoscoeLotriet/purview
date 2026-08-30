@@ -62,7 +62,7 @@ written: stop and file the `src/` config-extraction issue rather than adding a r
 in advance on the issue, so an implementation run that hits the ceiling splits at a known
 seam instead of stopping for another spec run.
 
-## `origin/claude/fq-5`
+## `archive/fq-5-slice0-original`
 
 Green, correct, and the source of 507 of the 515 lines now spread across #5 and #18.
 Cherry-pick from it. **Do not merge it** — it is the diff the ceiling stopped. Close it once
