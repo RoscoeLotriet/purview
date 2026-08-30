@@ -13,16 +13,15 @@ import type { Client } from '@modelcontextprotocol/sdk/client/index.js';
  * drive the bridge over a real socket to a fake Slack, including its failure
  * path, which `SlackFake.failNext` provokes without touching `src/`.
  *
- * Tests 16 and 17 (the digest) are **not here** — see the file-level note at
- * the bottom of this comment.
+ * Tests 16 and 17 (the digest) are **not here**. They are issue #28.
  *
  * `PurviewService.flushDigest` has no wire trigger: no MCP tool and no HTTP
  * route reaches it, and the only production caller is the `DIGEST_INTERVAL_MS`
  * timer in `src/server.ts`. Reaching it at integration altitude therefore needs
  * the spawned entrypoint from `harness/server-proc.ts` (slice 2a, #7), which
- * this slice's spec did not list as a dependency. Deferred to a follow-up
- * rather than worked around here, because every workaround is a scope decision
- * this run does not own.
+ * this slice's spec did not list as a dependency. Deferred to **#28** rather
+ * than worked around here, because every workaround is a scope decision this
+ * run does not own.
  */
 
 let harness: PurviewHarness | undefined;
@@ -61,8 +60,15 @@ async function call(
   return toolJson(await client.callTool({ name, arguments: args }));
 }
 
-/** An irreversible item at low confidence: severity above IMMEDIATE_THRESHOLD,
- *  so the card is posted rather than batched into a digest. */
+/**
+ * An irreversible item at low confidence. Severity works out to 0.66:
+ * 0.4 (irreversible) + 0.2 x 0.8 (confidence 0.2) + 0 (no deadline) +
+ * 0.2 x 0.5 (default root priority). That is *below* `IMMEDIATE_THRESHOLD`
+ * (0.7), so the band is `queued`, not `immediate` — the card is posted because
+ * the guard in `PurviewService.escalate` is `band !== 'digest'`, which admits
+ * `queued` too. Test 12 asserts the band so a weight change fails loudly here
+ * rather than as a bare `awaitPost` timeout in every test in this file.
+ */
 async function claimedItem(agent: Client, key: string): Promise<string> {
   const item = await call(agent, 'work_create', {
     intent: 'roll the release out to production',
@@ -99,6 +105,11 @@ async function escalate(agent: Client, workItemId: string): Promise<Record<strin
  * stderr. Spying on it is how a test can tell "delivery failed and was
  * swallowed" from "delivery never happened" — the two are otherwise identical
  * from outside, which is the whole subject of test 15.
+ *
+ * This couples three tests to a literal log string that `src/` does not share
+ * with them: rewording that line breaks 13, 14 and 15 at once. That is the
+ * price of the only signal the swallow leaves, and it is worth paying only
+ * until #12 records a delivery outcome on the record itself.
  */
 function captureSwallowedFailures(): () => string[] {
   const spy = vi.spyOn(console, 'error').mockImplementation(() => undefined);
@@ -133,6 +144,10 @@ it('delivers the card as Block Kit JSON with one button per option', async () =>
   // `escalationBlocks` returns. What has never been checked is that the thing
   // rendered is the thing sent, with the content type Slack requires.
   expect(card.headers['content-type']).toBe('application/json');
+
+  // The band that makes this delivery happen at all, pinned once for the file.
+  // 0.66 is `queued`; the post fires because the guard is `band !== 'digest'`.
+  expect(escalation.routing).toBe('queued');
 
   const body = card.body as { text?: string; blocks?: CardBlock[] };
   expect(body.text).toBe(ESCALATION_ARGS.question);
