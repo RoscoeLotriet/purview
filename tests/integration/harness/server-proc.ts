@@ -30,16 +30,15 @@ export interface ServerProcOptions {
 export interface ServerProc {
   readonly port: number;
   readonly baseUrl: string;
-  /** Captured lines. The entrypoint reports its configuration here. */
-  readonly stdout: readonly string[];
   readonly stderr: readonly string[];
   /** `null` until the child exits; `0` after a clean SIGTERM shutdown. */
   readonly exitCode: number | null;
   /**
    * Wait for a stdout line containing `match`. `startServerProc` resolves on
    * the "listening" line, which is liveness and not the end of the startup
-   * banner: the configuration lines after it may not have been flushed yet,
-   * and reading the array directly is a race that passes on a quiet machine.
+   * banner: later configuration lines may not have flushed yet. The captured
+   * lines are deliberately not exposed — reading them directly is the race
+   * this removes, and it passes on a quiet machine.
    */
   awaitStdout(match: string, opts?: WaitOptions): Promise<string>;
   /** SIGTERM, await exit, with a SIGKILL escape hatch on deadline. */
@@ -149,7 +148,6 @@ async function attempt(port: number, env: NodeJS.ProcessEnv): Promise<ServerProc
   return {
     port,
     baseUrl: `http://127.0.0.1:${port}`,
-    stdout,
     stderr,
     get exitCode() {
       return exitCode;

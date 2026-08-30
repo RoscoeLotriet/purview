@@ -114,6 +114,8 @@ function escalateBlocking(agent: Client, workItemId: string): Promise<unknown> {
  * same way `SlackFake.awaitPost` does. It is not a retry papering over a flaky
  * entrypoint, which gate 3 forbids: the read is deterministic once the entry
  * exists, and a genuinely broken append fails here rather than passing late.
+ * Hand-rolled rather than `awaitCondition`: that helper takes a synchronous
+ * predicate, and reading a resource is a round trip.
  */
 async function awaitEscalationId(agent: Client, workItemId: string): Promise<string> {
   const deadline = Date.now() + 5_000;
