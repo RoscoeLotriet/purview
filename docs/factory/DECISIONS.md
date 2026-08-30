@@ -11,6 +11,45 @@ Newest at the top.
 
 ---
 
+### 2026-08-30 - The 400-line stop condition counts code only
+
+**Change:** Charter §7, `STOP_IF`. Before: "The change would exceed 400 changed lines."
+After: "The change would exceed 400 changed lines **of code**." Documentation does not count
+toward the ceiling and gets no ceiling of its own. Documentation is defined as `docs/**` and
+`**/*.md`; everything else counts, including tests, `package.json`, lockfiles, build and
+tooling config, and CI workflows. The charter carries the exact `git diff --numstat`
+invocation so the count is measured, not estimated.
+
+**Evidence:** Thin, and worth saying so. This is not a loosening earned by a run of green
+results — the factory has four run records total. It is the resolution of a rule that could
+not be applied as written.
+
+- The rule stopped one run cold and was flagged as unresolvable by an independent verifier:
+  PR #14, a documents-only spec, 1218 changed lines, 0 of them code. The verifier
+  (`2026-08-29T013500Z-verify-14`, defect D4) recorded two available readings of §7 and
+  correctly refused to choose between them, since an agent waiving a stop condition on its
+  own initiative is the failure mode the charter exists to prevent.
+- Triage then filed the same gap a second time, on PR #15, noting it had "stopped a run
+  cold" twice.
+- Under the new rule PR #14 measures 0 lines and would not have stopped.
+
+**Reasoning, since the numbers do not carry it:** the ceiling is a limit on how much logic a
+reviewer can hold at once. Prose is not read the way logic is — a reviewer skims a spec by
+section and cannot skim a diff of control flow. The two things were sharing a unit, not a
+meaning.
+
+**Risk accepted:** Documentation diffs are now unbounded. A 5,000-line spec is a real review
+burden and nothing in the charter now stops one from being produced. This is a known hole,
+accepted deliberately rather than overlooked. The mitigating fact is that specs are written
+by `factory-spec`, which is interactive and gated by a human at each step, so a runaway spec
+has a human in the loop by construction in a way an unattended implementation run does not.
+
+**Revisit if:** a spec or docs PR arrives that a human declines to review on size grounds, or
+that gets rubber-stamped because it was too long to read. Either observation means the docs
+side needs its own ceiling — a higher one, counted separately — rather than none.
+
+---
+
 ## Template
 
 ### 2026-08-16 - <what changed>
