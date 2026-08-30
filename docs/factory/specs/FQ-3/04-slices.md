@@ -40,9 +40,11 @@ Two lessons, both applied below:
 
 ## The rule that shapes every slice: slices add files, they never modify them
 
-Charter §3 forbids an unattended run modifying an existing test file. Triage filed the open
-question of whether that covers non-`*.test.ts` helpers under `tests/` (PR #15); the gate 3
-amendment resolves it by design so no waiver is needed.
+Charter §3 forbids an unattended run modifying an existing file matching `TESTS_PROTECTED`,
+which covers `tests/**` — harness helpers included — and `vitest.config.ts`. Triage filed
+that scope as an open question on PR #15; it was decided on 2026-08-30 in favour of the broad
+reading (`docs/factory/DECISIONS.md`). The gate 3 amendment had already resolved it by design
+for this spec, so no waiver is needed here either way.
 
 **Every slice below creates new files only.** No slice modifies a file another slice created.
 
