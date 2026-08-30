@@ -76,8 +76,17 @@ The tracer bullet through the MCP seam. Real socket, real client, real transport
   is constructed — the configuration test 9 declares supported.
 - **done_when:** `pnpm test` runs both the `unit` and `integration` projects and is what the
   gates script invokes; `pnpm test:unit` runs unit only; the round-trip test passes on a real
-  socket; `startHarness` matches the amended contract and imports `SlackFake` as a type only;
-  no file under `src/` and no pre-existing test file modified.
+  socket; `startHarness` matches the amended contract, taking an injected Slack fake and
+  constructing no `SlackBridge` when none is given; no file under `src/` and no pre-existing
+  test file modified.
+
+  **Corrected 2026-08-30.** This clause previously read "imports `SlackFake` as a type only",
+  which is unsatisfiable: a type-only import still requires the module to resolve, and
+  `slack-fake.ts` does not land until slice 0b, so it yields `TS2307`. Confirmed by two
+  independent verifier contexts compiling a probe. The harness declares a structural
+  `SlackTarget { readonly webhookUrl: string }` instead, which 0b's `SlackFake` satisfies by
+  shape — reaching the clause's stated goal, no dependency on `slack-fake.ts`, more completely
+  than an `import type` could. See `03-design-amendment-1.md`.
 - **Total: ~253** · **gate_level:** full · **confidence:** high (203 of it measured)
 - **Blocks:** every other slice.
 
