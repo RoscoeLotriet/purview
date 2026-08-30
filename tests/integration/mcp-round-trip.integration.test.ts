@@ -52,13 +52,15 @@ it('carries an agent through create, claim and escalate over a real MCP connecti
 
   await call(agent, 'work_claim', { work_item_id: workItemId, confidence: 0.2 });
 
-  // Non-blocking: the service returns as soon as the escalation is recorded,
-  // with `outcome: null` because nobody has answered and nothing is waiting.
+  // `blocking: false` explicitly rather than by omission. The service branches on
+  // `if (args.blocking)`, so leaving it out happens to work — but this test's whole
+  // point is that it does not park a waiter, and that should be stated, not inferred.
   const escalated = await call(agent, 'work_escalate', {
     work_item_id: workItemId,
     kind: 'approval',
     question: 'Roll out to production now?',
     context_summary: 'Release is staged and the rollout is irreversible once started.',
+    blocking: false,
     options: [
       { id: 'ship', label: 'Ship it' },
       { id: 'hold', label: 'Hold' },
@@ -100,4 +102,15 @@ it('carries an agent through create, claim and escalate over a real MCP connecti
   );
   expect(claimEntry, 'no state_change entry recorded the claim by scout').toBeDefined();
   expect(claimEntry?.author_id).toBe(owner);
+
+  // Read the escalation back through the resource too, not only from the tool
+  // response that created it. A tool echoing its own return value proves the call
+  // happened; this proves the escalation was persisted against the item and is
+  // reachable by a later reader, which is what the queue item asks for.
+  const escalationEntry = stored.transcript.find((e) => e.kind === 'escalation');
+  expect(escalationEntry, 'no escalation entry recorded against the item').toBeDefined();
+  expect((escalationEntry?.payload as Record<string, unknown> | undefined)?.escalation_id).toBe(
+    escalation.id,
+  );
+  expect(escalationEntry?.body).toBe('Roll out to production now?');
 });
