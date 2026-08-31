@@ -6,23 +6,23 @@ gate_2_architecture: approved 2026-08-29 (pnpm test runs both suites; CI filed s
 gate_3_design: approved 2026-08-29 (child process accepted; test 15 kept, narrowly scoped)
 gate_3_amendment_1: approved 2026-08-30 (injected SlackFake; tap() becomes a free function)
 gate_4_slices: approved 2026-08-31, revision 3 (slice 4 split on measurement; queue written)
-slices_completed: 8 / 10
-tests_landed: 19 / 26
-status_as_of: 2026-08-31T14:15Z
+slices_completed: 10 / 10
+tests_landed: 26 / 26
+status: complete — every slice merged; #3 itself awaits a human's close
+status_as_of: 2026-08-31T14:45Z
 open_questions:
-  - none blocking. #38 and #39 are the only slices left and both are claimable as they stand.
-  - housekeeping, not blocking: #28 still carries factory:awaiting-review although its PR
-    (#37) merged at 13:47Z. A closed-out item holding a live queue label is the same
-    disagreement that hid #28's own work for a day. A human owns closing it.
+  - none. The last two slices (#38, #39) merged as PR #43 and PR #44.
+  - the stale factory:awaiting-review labels this file flagged are cleared. All ten closed
+    slice issues (#5, #6, #7, #8, #10, #18, #26, #28, #38, #39) were verified merged first,
+    then had the label removed on 2026-08-31.
   - not blocking, carried for a later reader: making a principal's display_name observable
     on a wire surface would be a src/ change and a product decision. FQ-3 does not need it —
     test 10 reaches the same claim by another route — and no issue is filed for it.
 ```
 
-**Two slices are further along than the gate-4 plan describes, and two are further behind.**
-This file was three days stale — it still read `slices_completed: 0 / 7` after six slices had
-merged — so treat the table below as the current shape and `04-slices.md` as the plan that
-was approved.
+**FQ-3 is done as specified.** Treat the table below as the record of what landed and
+`04-slices.md` as the plan that was approved. They differ by the three splits taken during
+implementation, each recorded on its issue and explained further down.
 
 ## Slices
 
@@ -41,13 +41,66 @@ is 26 and not 25.
 | #8 | 3a — Slack delivery over a real socket | 12–15 | **merged** | PR #29 · `9bbdabb` |
 | #28 | 3b — digest delivery | 16, 17 | **merged** | PR #37 · `759364e` |
 | #9 | 4 — **split into 4a + 4b** | 18–24 | closed as split | gate 4 rev 3, 2026-08-31 |
-| #38 | 4a — resources | 18–20 | `ready-to-implement` | written, 208 lines, green · `547a4ac` |
-| #39 | 4b — concurrent agents | 21–24 | `ready-to-implement` | written, 280 lines, green · `547a4ac` |
+| #38 | 4a — resources | 18–20 | **merged** | PR #43 · `f93b328` |
+| #39 | 4b — concurrent agents | 21–24 | **merged** | PR #44 · `d2c88e2` |
 | #10 | 5 — restart boundary tripwire | 25 | **merged** | PR #31 · `4636cc8` |
 
-Nineteen integration tests are on `main`, in eight files, all green at `full` gates. The seven
-not on `main` are tests 18–24, which **are** written and green but parked on `claude/fq-9` at
-`547a4ac` pending the 4a/4b split. Every other slice has landed.
+**All twenty-six integration tests are on `main`, in ten files, all green at `full` gates.**
+Nothing is parked. Tests 18–24 landed as PR #43 and PR #44, cherry-picked from `claude/fq-9`
+at `547a4ac` along the file boundary the 4a/4b split ran on, so no test moved and none was
+trimmed; the verifier confirmed both files byte-identical to the parked blobs.
+
+## Done, verified against #3's own clauses
+
+Checked on `d2c88e2` rather than inferred from the slices being merged. #3 asked for four
+things:
+
+| Clause from #3 | Evidence |
+|---|---|
+| `tests/integration/` exists and every gap 1–6 has a test that fails if its wiring breaks | 10 files, 26 tests; gap→slice map below, each with a negative proof in its run record |
+| integration invocable separately from the unit suite, both green | `--project integration` → 26 passed; `pnpm test:unit` → 86 passed |
+| `gates.sh` GREEN at the required level | `FACTORY_GATES: level=full status=GREEN passed=4 failed=0 failing=none skipped=none misconfigured=none` — 112 tests, 22 files, none skipped |
+| no file under `src/` and no pre-existing test file modified | `git log a379055..main -- src/` is **empty**: not one commit across ten slices touched `src/` |
+
+That last line is the one worth keeping. The suite's defining constraint was that it must
+cover existing behaviour without changing any of it, and the whole of `src/` is untouched
+from PR #1's merge to now. Two `src/` defects were found along the way (#12, #40) and both
+were filed rather than fixed in place.
+
+Gap coverage, from #3's own numbering:
+
+| Gap | Closed by |
+|---|---|
+| 1 — nothing crosses all three seams in one scenario | #5, #18, #6 |
+| 2 — `src/server.ts` has zero coverage | #7, #26 |
+| 3 — `SlackBridge.send()` never talks to a server | #8, #28 |
+| 4 — the four MCP resources never read over the real transport | #38 |
+| 5 — multi-agent concurrency untested at the transport | #39 |
+| 6 — the documented restart behaviour has no test pinning it | #10 |
+
+**#3 itself is still open and a human owns closing it.** Its label is
+`factory:wait-to-implement`, which should come off in the same action; a closed issue holding
+a live queue label is the disagreement described below.
+
+## Queue labels on the closed slices, cleared 2026-08-31
+
+All ten closed slice issues were still carrying `factory:awaiting-review` after their pull
+requests merged. Each was checked against its merged PR before the label came off, because the
+failure mode this file records twice is a label and a state disagreeing while real work sits
+invisible — the check is what distinguishes stale bookkeeping from a parked slice.
+
+Cleared: #5, #6, #7, #8, #10, #18, #26, #28, #38, #39. #9 already carried none.
+
+This is housekeeping against a live defect, not a fix for it. Nothing stops the next merged
+slice from leaving its label behind; #33 is where the mechanism gets addressed.
+
+**One observation for #33, mechanism not established.** #39 closed as `completed` at
+14:32:24Z, the same moment PR #44 merged, and PR #44's body contains no closing keyword. Its
+implementation commit carries the trailer `Closes-queue-item: #39`. Either the human closed
+the issue by hand at merge, or GitHub parsed that trailer as a closing keyword — in which case
+the surface #33 describes is wider than PR bodies and includes commit trailers, which are just
+as immutable once merged. Worth settling from the timeline before #33 is specced, since it
+changes what the rule has to cover. The close itself was correct either way: the item was done.
 
 ## Two slices left the queue without landing
 
@@ -199,16 +252,27 @@ deleted.** Do not merge it: it is the diff the ceiling stopped.
 
 ## Run records
 
-- `docs/factory/runs/2026-08-28T235818Z-spec-3.md` — gates 1–4, revision 1
-- `docs/factory/runs/2026-08-30T144500Z-spec-3-recut.md` — gate 3 amendment 1, gate 4 revision 2
-- `docs/factory/runs/2026-08-30T174947Z-implement-5.md` — slice 0a, stopped RED
-- `docs/factory/runs/2026-08-30T180514Z-implement-5-resumed.md` — slice 0a, verifier rejected
-- `docs/factory/runs/2026-08-30T205710Z-implement-5-ratified.md` — slice 0a, merged
-- `docs/factory/runs/2026-08-30T215353Z-implement-18.md` — slice 0b
-- `docs/factory/runs/2026-08-30T220821Z-implement-6.md` — slice 1
-- `docs/factory/runs/2026-08-30T232000Z-implement-7.md` — slice 2a (timestamp wrong, see #32)
-- `docs/factory/runs/2026-08-30T235500Z-implement-8.md` — slice 3a (timestamp wrong, see #32)
-- `docs/factory/runs/2026-08-31T071843Z-implement-10.md` — slice 5
-- `docs/factory/runs/2026-08-31T132508Z-implement-9.md` — slice 4, stopped at 488 lines; the
-  measurement gate 4 revision 3 is built on
-- `docs/factory/runs/2026-08-31T134100Z-spec-9.md` — gate 4 revision 3, the 4a/4b split
+Chronological, every FQ-3 run. Four of these timestamps are an hour off, minted from local
+time and labelled `Z`; that is #32, not a gap in the record.
+
+- `2026-08-28T235818Z-spec-3.md` — gates 1–4, revision 1
+- `2026-08-30T144500Z-spec-3-recut.md` — gate 3 amendment 1, gate 4 revision 2
+- `2026-08-30T174947Z-implement-5.md` — slice 0a, stopped RED
+- `2026-08-30T180514Z-implement-5-resumed.md` — slice 0a, verifier rejected
+- `2026-08-30T205710Z-implement-5-ratified.md` — slice 0a, merged
+- `2026-08-30T215353Z-implement-18.md` — slice 0b
+- `2026-08-30T220821Z-implement-6.md` — slice 1
+- `2026-08-30T232000Z-implement-7.md` — slice 2a (timestamp wrong, see #32)
+- `2026-08-30T235500Z-implement-8.md` — slice 3a (timestamp wrong, see #32)
+- `2026-08-31T071843Z-implement-10.md` — slice 5
+- `2026-08-31T093546Z-implement-26.md` — slice 2b, merged as PR #36
+- `2026-08-31T132322Z-implement-28.md` — slice 3b, merged as PR #37
+- `2026-08-31T132508Z-implement-9.md` — slice 4, stopped at 488 lines; the measurement gate 4
+  revision 3 is built on
+- `2026-08-31T134029Z-verify-37.md` — slice 3b, independent verification
+- `2026-08-31T134100Z-spec-9.md` — gate 4 revision 3, the 4a/4b split
+- `2026-08-31T135945Z-implement-38.md` — slice 4a, merged as PR #43
+- `2026-08-31T141716Z-implement-39.md` — slice 4b, merged as PR #44
+- `2026-08-31T142938Z-verify-44.md` — slice 4b, independent verification
+
+All paths are relative to `docs/factory/runs/`.
