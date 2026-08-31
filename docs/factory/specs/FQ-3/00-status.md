@@ -10,10 +10,10 @@ slices_completed: 6 / 9
 tests_landed: 14 / 26
 status_as_of: 2026-08-31T09:00Z
 open_questions:
-  - blocking, one item: #26 (slice 2b) is closed as completed, but its three tests are not
-    on `main`. Either the slice was dropped deliberately and FQ-3 ships without tests 7, 8
-    and 10, or the close was an accident and the issue should be reopened. Owner: human.
-    See "Two slices left the queue without landing" below.
+  - blocking #26 only: test 10 as specced cannot fail against the bug it exists to catch,
+    because a principal's display_name is not observable on any wire surface. Needs a
+    product decision before that test is written. Tests 7 and 8 are unaffected. Owner:
+    human. See "Two slices left the queue without landing" below.
   - not blocking: nothing. #28 and #9 are both claimable as they stand.
 ```
 
@@ -34,7 +34,7 @@ is unnumbered, which is why the denominator is 26 and not 25.
 | #18 | 0b — Slack fake, signing, full round trip | 1 | **merged** | PR #24 · `0e43740` |
 | #6 | 1 — round-trip edge cases | 2–5 | **merged** | PR #25 · `5344776` |
 | #7 | 2a — the entrypoint spawned as a process | 6, 9, 11 | **merged** | PR #27 · `79f4c53` |
-| #26 | 2b — signing secret and principal config | 7, 8, 10 | **closed, not landed** | see below |
+| #26 | 2b — signing secret and principal config | 7, 8, 10 | `wait-to-implement` (stale) | reopened; see below |
 | #8 | 3a — Slack delivery over a real socket | 12–15 | **merged** | PR #29 · `9bbdabb` |
 | #28 | 3b — digest delivery | 16, 17 | `ready-to-implement` | claimable now |
 | #9 | 4 — resources and concurrent agents | 18–24 | `ready-to-implement` | claimable now |
@@ -45,8 +45,7 @@ not yet written are tests 7, 8, 10 (#26), 16, 17 (#28) and 18–24 (#9).
 
 ## Two slices left the queue without landing
 
-Both were closed as *completed* while their tests did not exist. One is fixed; one is a
-decision for a human.
+Both were closed as *completed* while their tests did not exist. Both have been reopened.
 
 **#28 (slice 3b) — accidental, reopened 2026-08-31.** PR #29's body contained the sentence
 "If you prefer that fork, close #28 and …" — a conditional describing an option. GitHub read
@@ -54,19 +53,32 @@ the bare `close #28` as a closing keyword and closed the issue on merge. The iss
 `factory:ready-to-implement` throughout, so label and state disagreed and the work was
 invisible rather than parked. Reopened with the history recorded on the issue.
 
-**#26 (slice 2b) — still open as a question.** Closed 2026-08-30T22:55Z as completed, linked
-to PR #27. PR #27 delivered tests 6, 9 and 11 only; its own run record and PR body both say in
-terms that tests 7, 8 and 10 are deferred to #26. `SLACK_SIGNING_SECRET` appears in no
-integration test that exercises it as configuration. Unlike #28 there is no closing keyword in
-PR #27's body, so this may have been deliberate — but nothing records a reason, and the issue
-still carries `factory:wait-to-implement`.
+**#26 (slice 2b) — mechanism unconfirmed, reopened 2026-08-31.** Closed 2026-08-30T22:55Z as
+completed, linked to PR #27. PR #27 delivered tests 6, 9 and 11 only; its own run record and PR
+body both end with "Tests 7, 8 and 10, deliberately, to #26." `SLACK_SIGNING_SECRET` appears in
+no integration test that exercises it as configuration. Unlike #28 there is **no** closing
+keyword in PR #27's body, so the mechanism here is not established and the close may have been
+deliberate — but nothing recorded a reason, so it was reopened rather than left as a silent
+drop. Its label still reads `factory:wait-to-implement` against a blocker (#7) that merged as
+`79f4c53`; promoting it is a triage decision and was left to a triage run.
 
-What is at stake if it stays closed is **test 8**, which `04-slices.md` calls the sharpest test
+What was at stake in that close is **test 8**, which `04-slices.md` calls the sharpest test
 in FQ-3: `src/http/app.ts` skips signature verification entirely when no signing secret is
 configured, so a deployment that forgets it exposes an endpoint where anyone who can reach the
 port may answer questions addressed to the accountable human — and the transcript attributes
 those answers to that human. The test does not fix that. It pins it as an explicit fact so the
 behaviour cannot be discovered by accident later. Dropping it drops the record, not the risk.
+
+**#26 carries two debts a human still owes it**, both raised by PR #27 and neither settled. The
+first is confirming that slice 2's split point still holds now that the overflow measured +75%
+rather than the +56% the pre-agreement was made against. The second is the harder one and is
+this file's one blocking open question: **test 10 as specced cannot fail against the bug it
+exists to catch.** A principal's `display_name` is not observable on any wire surface — no MCP
+tool lists principals, `principal://{id}/queue` is keyed by id, and `src/http/app.ts` falls back
+to `service.defaultHuman` when it cannot match an interaction's `user_name`. So the obvious
+name-lookup assertion passes whether or not `PURVIEW_HUMAN` was honoured. Making it observable
+is a `src/` change the slice may not make, and whether it is worth doing is a product decision.
+Tests 7 and 8 are unaffected and remain writable as they stand.
 
 **The general defect is #33.** PR bodies in this repo routinely discuss issue numbers in prose,
 so any sentence containing close/fixes/resolves followed by an issue number will silently close
