@@ -24,88 +24,87 @@ The corresponding live labels use the `factory:` prefix, for example
 
 ---
 
-_Snapshot written by `factory-spec` on 2026-08-30, superseding the `factory-triage` snapshot
-of the same day (#16). Live labels are the source of truth._
+_Snapshot written by `factory-triage` on 2026-08-31, superseding the `factory-spec` snapshot
+of 2026-08-30 (PR #14). Live labels are the source of truth._
 
-This run re-cut FQ-3's slice 0 after an implementation attempt measured it at 515 changed
-lines against Charter §7's 400-line ceiling. Gate 3 amendment 1 and gate 4 revision 2 were
-both approved by a human on 2026-08-30. The Slack half is the new FQ-18.
+Since the prior snapshot, slices #5, #18, #6 and #7 merged to `main`, unblocking #9, #10 and
+the newly-split #28. This run re-derived all 8 currently-open issues against
+`CHARTER.md` §2, §4 and §7, found #9, #10 and #28 blocker-free, and promoted them from
+`wait-to-implement` to `ready-to-implement`. #8, #11, #12, #23 were re-derived and left
+unchanged. #3 remains the tracking issue, still blocked on its own slices.
 
-**FQ-5 was claimed and is now `needs-info`, not claimable.** Implementation run
-`2026-08-30T174947Z-implement-5` claimed it, went red twice under Charter §7 and stopped; a
-stop hook then prompted a resumption that no human authorized. The resumed work is green on
-branch `claude/fq-5` and the verifier proved the test correct by mutation, but rejected the
-run over its records and the missing authorization. A human owes a decision: ratify the
-resumption or discard it. See `docs/factory/runs/2026-08-30T180514Z-implement-5-resumed.md`.
-
-Counts: ready-to-implement=0, ready-to-spec=2 (#11, #12), needs-info=1 (#5),
-wait-to-implement=7 (#3, #6, #7, #8, #9, #10, #18).
+Counts: ready-to-implement=3 (#9, #10, #28), ready-to-spec=3 (#11, #12, #23),
+awaiting-review=1 (#8), wait-to-implement=1 (#3), needs-info=0.
 
 ## Claimable now
 
-_(none — #5 is parked on a human decision; everything else is blocked on it)_
-
-## FQ-5: integration slice 0a — harness core and the MCP tracer
-- disposition: needs-info · **blocked on a human decision, see above**
-- source: https://github.com/RoscoeLotriet/purview/issues/5
-- parent: #3 · spec: `docs/factory/specs/FQ-3/` (gate 4 revision 2)
-- files_expected: tests/integration/harness/{ports,wait,purview}.ts, tests/integration/mcp-round-trip.integration.test.ts, package.json, vitest.config.ts
+## FQ-28: integration slice 3b — digest delivery
+- disposition: ready-to-implement
+- source: https://github.com/RoscoeLotriet/purview/issues/28
+- last_triaged: 2026-08-31
+- repro: not-attempted (new test coverage, not a bug report)
+- files_expected: tests/integration/digest-delivery.integration.test.ts
 - load_bearing: false
 - gate_level: full
-- done_when: `pnpm test` runs both vitest projects and is what the gates script invokes; `pnpm test:unit` runs unit only; one integration test drives create → claim → escalate(non-blocking) over a real MCP client on a real socket; `startHarness` matches gate 3 amendment 1 (injected Slack fake, no `tap()`) — note the amendment's "type-only import" spelling cannot compile in this slice and was implemented as a structural interface instead, see the correction in `03-design-amendment-1.md`; nothing under `src/` modified
+- done_when: tests 16 and 17 pass in a new file against a spawned entrypoint driving its own digest cadence; test 16 asserts both the absence of an individual card and the presence of the escalation in a delivered digest; test 17 asserts the resolved entry carries no `actions` block; no file under `src/` and no existing test file is modified
+- confidence: medium
+- notes: Split out of #8 during implementation (undeclared dependency on #7's `server-proc.ts`). Blocker (#7, PR #27, `79f4c53`) merged 2026-08-30. Promoted this run. `confidence: medium` — real-timer digest cadence in a child process plus severity-band arithmetic are two things that must both be right. A human should still confirm the 3a/3b split named in #8 and #29 before this lands.
+
+## FQ-10: integration slice 5 — restart boundary tripwire
+- disposition: ready-to-implement
+- source: https://github.com/RoscoeLotriet/purview/issues/10
+- last_triaged: 2026-08-31
+- repro: not-attempted (new test coverage, not a bug report)
+- files_expected: tests/integration/restart-boundary.integration.test.ts
+- load_bearing: false
+- gate_level: full
+- done_when: work created before `SIGTERM` is absent after a restart on the same port; test carries a comment naming it as the tripwire a durable store must deliberately flip; no file under `src/` is modified
 - confidence: high
-- notes: ~253 lines, 203 of them measured on `archive/fq-5-slice0-original` — cherry-pick, do not rewrite. Blocks everything else in FQ-3. `pnpm test` must run integration too: the gates script invokes exactly `pnpm test` and there is no CI (#11), so a separate script would gate nothing.
+- notes: Blocker was #7 (slice 2, `server-proc.ts`). Merged 2026-08-30 as `79f4c53` (PR #27). Promoted this run. ~70 lines estimated, smallest of the remaining slices.
+
+## FQ-9: integration slice 4 — resources and concurrent agents
+- disposition: ready-to-implement
+- source: https://github.com/RoscoeLotriet/purview/issues/9
+- last_triaged: 2026-08-31
+- repro: not-attempted (new test coverage, not a bug report)
+- files_expected: tests/integration/resources.integration.test.ts, tests/integration/concurrent-agents.integration.test.ts
+- load_bearing: false
+- gate_level: full
+- done_when: tests 18–24 pass; test 19 fails if the bare `workitem://{id}` template is registered before the more specific ones; the concurrency file carries the gate-2 scope note that these prove await-interleaving safety only; no file under `src/` is modified
+- confidence: high
+- notes: Blocker was #18 (slice 0b — the tap, needed only for test 24). #18 closed `completed` 2026-08-30. All of 18–24 unblocked, not just 18–23. Promoted this run in full. ~250 lines estimated.
 
 ---
 
-## Blocked on a named dependency
+## In review
 
-## FQ-18: integration slice 0b — Slack fake, signing, and the full round trip
-- disposition: wait-to-implement · **blocked on #5**
-- source: https://github.com/RoscoeLotriet/purview/issues/18
-- gate_level: full · confidence: high
-- done_when: the held `work_escalate` promise is released by a signed tap whose `action_id` was read off the card recorded by the fake; no assertion on the `/slack/interactions` response
-- notes: ~329 lines, 304 measured. Slice 0's original test 1, unchanged. Promote when #5 merges.
-
-## FQ-6: integration slice 1 — round-trip edge cases
-- disposition: wait-to-implement · **blocked on #18**
-- source: https://github.com/RoscoeLotriet/purview/issues/6
-- gate_level: full · confidence: high
-- done_when: tests 2–5 pass; test 3 proves non-release via `stillPending`, not a status code
-- notes: ~180 lines. **Now its own file** (`escalation-edge-cases.integration.test.ts`) — revision 1 had it extending another slice's `*.test.ts`, which Charter §3 forbids.
-
-## FQ-7: integration slice 2 — bootstrap and configuration
-- disposition: wait-to-implement · **blocked on #18**
-- source: https://github.com/RoscoeLotriet/purview/issues/7
-- gate_level: full · confidence: medium
-- done_when: the real entrypoint is spawned under `tsx` and tests 6–11 pass; test 8 characterizes the open endpoint deliberately
-- notes: ~280 lines — **the slice most likely to overflow.** Split point pre-agreed on the issue so no new spec run is needed. Gate 3 standing instruction: retries or sleeps to stay green are a verdict, not a patch.
-
-## FQ-8: integration slice 3 — Slack delivery and failure modes
-- disposition: wait-to-implement · **blocked on #18**
+## FQ-8: integration slice 3a — Slack delivery and failure modes
+- disposition: awaiting-review
 - source: https://github.com/RoscoeLotriet/purview/issues/8
-- gate_level: full · confidence: high
-- done_when: tests 12–17 pass; test 15 names #12 as the issue that will invert it
-- notes: ~220 lines
+- last_triaged: 2026-08-31
+- repro: confirmed (tests 12–15 pass, gates GREEN at full)
+- files_expected: tests/integration/slack-delivery.integration.test.ts
+- load_bearing: false
+- gate_level: full
+- done_when: tests 12–15 pass; test 15 scoped to the escalation record's own fields with a comment naming #12 as the reason it will later be inverted; no file under `src/` modified
+- confidence: high
+- notes: PR #29 open (draft), verifier accepted with reservations (all fixed). Not re-triaged into a queue-state disposition — `awaiting-review` is the correct state for an issue with an open PR and belongs to a human's decision, not to this run's four dispositions. Scope narrowed in place from tests 12–17 to 12–15; tests 16–17 are #28.
 
-## FQ-9: integration slice 4 — resources and concurrent agents
-- disposition: wait-to-implement · **blocked on #18**
-- source: https://github.com/RoscoeLotriet/purview/issues/9
-- gate_level: full · confidence: high
-- done_when: tests 18–24 pass; test 19 fails if the bare `workitem://{id}` template is registered first
-- notes: ~250 lines. Only test 24 needs #18; tests 18–23 need only #5. Promotable early with test 24 deferred if review capacity allows.
+---
 
-## FQ-10: integration slice 5 — restart boundary tripwire
-- disposition: wait-to-implement · **blocked on #7**
-- source: https://github.com/RoscoeLotriet/purview/issues/10
-- gate_level: full · confidence: high
-- done_when: work created before `SIGTERM` is absent after a restart on the same port
-- notes: ~70 lines. If #7 splits, the blocker becomes its 2a half.
+## Blocked on its own slices
 
 ## FQ-3: integration suite covering the step-1 seams (parent)
-- disposition: wait-to-implement · **blocked on its own slices — #5, #18, #6, #7, #8, #9, #10**
+- disposition: wait-to-implement
 - source: https://github.com/RoscoeLotriet/purview/issues/3
-- notes: tracking issue. Closes when the seven slices land.
+- last_triaged: 2026-08-31
+- repro: not-attempted (tracking issue, no code of its own)
+- files_expected: (none — tracking issue)
+- load_bearing: false
+- gate_level: full
+- done_when: all of #5, #18, #6, #7, #8, #9, #10, #28 merged
+- confidence: high
+- notes: #5, #18, #6, #7 merged. #8 in review (PR #29). #9, #10, #28 promoted to `ready-to-implement` this run. Closes when the rest land.
 
 ---
 
@@ -114,50 +113,43 @@ _(none — #5 is parked on a human decision; everything else is blocked on it)_
 ## FQ-11: run the factory gates automatically on every push
 - disposition: ready-to-spec
 - source: https://github.com/RoscoeLotriet/purview/issues/11
-- notes: `.github/workflows/**` is load-bearing under Charter §2 — `deep` gates and a human read. Nothing runs the gates automatically today, which is why FQ-5's `pnpm test` wiring matters.
+- last_triaged: 2026-08-31
+- repro: not-attempted (no CI exists yet — nothing to reproduce)
+- files_expected: .github/workflows/**
+- load_bearing: true
+- gate_level: deep
+- done_when: a spec exists and is approved through factory-spec's human gates
+- confidence: high
+- notes: Unchanged this run. `.github/workflows/**` is Charter §2 `LOAD_BEARING`, which Charter §4 `NEEDS_SPEC` names directly.
 
 ## FQ-12: record Slack delivery outcome so a dropped escalation is observable
 - disposition: ready-to-spec
 - source: https://github.com/RoscoeLotriet/purview/issues/12
-- notes: `src/service/purview.ts:727-736` swallows every bridge failure. A `src/` change and a product decision. Slice 3's test 15 is its acceptance test, written in its pre-fix form and expected to be inverted when this lands.
+- last_triaged: 2026-08-31
+- repro: confirmed (`src/service/purview.ts:727-736` swallows every bridge failure — read, not executed)
+- files_expected: src/service/purview.ts (and whatever the approved spec adds)
+- load_bearing: false
+- gate_level: full
+- done_when: a spec exists and is approved through factory-spec's human gates
+- confidence: high
+- notes: Unchanged this run. Product-intent decision (what gets recorded, whether delivery failure changes escalation behaviour) — Charter §4 `NEVER_AUTOMATE` names product intent directly. #8's test 15 is written to be inverted when this lands.
+
+## FQ-23: gates.sh — enforce Charter §3 TESTS_PROTECTED mechanically, not just in prose
+- disposition: ready-to-spec
+- source: https://github.com/RoscoeLotriet/purview/issues/23
+- last_triaged: 2026-08-31
+- repro: not-attempted (a design gap, not a reproducible bug)
+- files_expected: docs/factory/specs/FQ-23/**
+- load_bearing: true
+- gate_level: deep
+- done_when: a spec exists deciding (a) how gates.sh obtains a base ref and what it reports when it cannot, (b) how an approved interactive test-file edit passes without a reachable agent bypass, (c) whether it is a new gate name or folded into an existing one, and (d) whether the §7 line ceiling is enforced in the same pass — approved through factory-spec's human gates
+- confidence: medium
+- notes: Unchanged this run. `.claude/scripts/gates.sh` and `.factory/gates.conf` are both Charter §2 `LOAD_BEARING`, forcing `ready-to-spec` regardless of size. Not urgent — no CI exists (#11), no monitor run has ever fired, so there is no live unattended run this gap currently exposes.
 
 ---
 
-## Wave plan for FQ-3
-
-Charter §7 stops the factory above 3 items awaiting human review, so this is a constraint,
-not a suggestion. The 0a/0b split adds a wave.
-
-| Wave | Slices | Review load |
-|---|---|---|
-| 1 | #5 (0a) | 1 PR — everything depends on it |
-| 2 | #18 (0b) | 1 PR — slices 1–4 all consume its files |
-| 3 | #6, #7, #8 | 3 PRs — exactly at the charter limit |
-| 4 | #9, #10 | 2 PRs |
-
-If a wave-3 item is rejected, #9 can be promoted to fill the gap.
-
-## Standing rule for every FQ-3 slice
-
-**Slices add files. They never modify a file another slice created.** This keeps the suite
-inside Charter §3 without needing a waiver on the open question of whether §3 covers
-non-`*.test.ts` helpers under `tests/`.
-
-Measure before opening a PR, per Charter §7:
-
-```bash
-git diff --numstat origin/main...HEAD -- . ':!docs/**' ':!*.md' \
-  | awk '{ a += $1; r += $2 } END { print a + r }'
-```
-
-Over 400: stop and split. Do not trim tests to fit.
-
 ## Do not merge `archive/fq-5-slice0-original`
 
-It is green and 507 of its 515 lines are reused across #5 and #18, but it *is* the 515-line
-diff the ceiling stopped. It is a cherry-pick source only.
-
-It was originally pushed as `claude/fq-5`. That name is the deterministic claim ref the
-contract requires, and holding it would have deadlocked the item — no later run could ever
-win the claim. It was archived to this name at the identical SHA and the claim name freed.
-Delete the archive once #18 merges.
+It is green and most of its lines are reused across the now-merged #5 and #18, but it *is*
+the 515-line diff the Charter §7 ceiling stopped. It is a cherry-pick source only. Delete the
+archive once its last consumer (already merged) is confirmed by a human read.
