@@ -10,11 +10,10 @@ slices_completed: 6 / 9
 tests_landed: 14 / 26
 status_as_of: 2026-08-31T09:00Z
 open_questions:
-  - blocking #26 only: test 10 as specced cannot fail against the bug it exists to catch,
-    because a principal's display_name is not observable on any wire surface. Needs a
-    product decision before that test is written. Tests 7 and 8 are unaffected. Owner:
-    human. See "Two slices left the queue without landing" below.
-  - not blocking: nothing. #28 and #9 are both claimable as they stand.
+  - none blocking. #26, #28 and #9 are all claimable as they stand.
+  - not blocking, carried for a later reader: making a principal's display_name observable
+    on a wire surface would be a src/ change and a product decision. FQ-3 does not need it —
+    test 10 reaches the same claim by another route — and no issue is filed for it.
 ```
 
 **Two slices are further along than the gate-4 plan describes, and two are further behind.**
@@ -34,7 +33,7 @@ is unnumbered, which is why the denominator is 26 and not 25.
 | #18 | 0b — Slack fake, signing, full round trip | 1 | **merged** | PR #24 · `0e43740` |
 | #6 | 1 — round-trip edge cases | 2–5 | **merged** | PR #25 · `5344776` |
 | #7 | 2a — the entrypoint spawned as a process | 6, 9, 11 | **merged** | PR #27 · `79f4c53` |
-| #26 | 2b — signing secret and principal config | 7, 8, 10 | `wait-to-implement` (stale) | reopened; see below |
+| #26 | 2b — signing secret and principal config | 7, 8, 10 | `ready-to-implement` | reopened and promoted 2026-08-31 |
 | #8 | 3a — Slack delivery over a real socket | 12–15 | **merged** | PR #29 · `9bbdabb` |
 | #28 | 3b — digest delivery | 16, 17 | `ready-to-implement` | claimable now |
 | #9 | 4 — resources and concurrent agents | 18–24 | `ready-to-implement` | claimable now |
@@ -59,8 +58,9 @@ body both end with "Tests 7, 8 and 10, deliberately, to #26." `SLACK_SIGNING_SEC
 no integration test that exercises it as configuration. Unlike #28 there is **no** closing
 keyword in PR #27's body, so the mechanism here is not established and the close may have been
 deliberate — but nothing recorded a reason, so it was reopened rather than left as a silent
-drop. Its label still reads `factory:wait-to-implement` against a blocker (#7) that merged as
-`79f4c53`; promoting it is a triage decision and was left to a triage run.
+drop. Its label had also gone stale — `factory:wait-to-implement` against a blocker that merged —
+and was promoted to `factory:ready-to-implement` in the same session, by the human rather than by
+a triage run.
 
 What was at stake in that close is **test 8**, which `04-slices.md` calls the sharpest test
 in FQ-3: `src/http/app.ts` skips signature verification entirely when no signing secret is
@@ -69,16 +69,15 @@ port may answer questions addressed to the accountable human — and the transcr
 those answers to that human. The test does not fix that. It pins it as an explicit fact so the
 behaviour cannot be discovered by accident later. Dropping it drops the record, not the risk.
 
-**#26 carries two debts a human still owes it**, both raised by PR #27 and neither settled. The
-first is confirming that slice 2's split point still holds now that the overflow measured +75%
-rather than the +56% the pre-agreement was made against. The second is the harder one and is
-this file's one blocking open question: **test 10 as specced cannot fail against the bug it
-exists to catch.** A principal's `display_name` is not observable on any wire surface — no MCP
-tool lists principals, `principal://{id}/queue` is keyed by id, and `src/http/app.ts` falls back
-to `service.defaultHuman` when it cannot match an interaction's `user_name`. So the obvious
-name-lookup assertion passes whether or not `PURVIEW_HUMAN` was honoured. Making it observable
-is a `src/` change the slice may not make, and whether it is worth doing is a product decision.
-Tests 7 and 8 are unaffected and remain writable as they stand.
+**#26 was promoted to `ready-to-implement` on 2026-08-31**, its blocker (#7) having merged as
+`79f4c53`. Nothing about it is outstanding for a human. The slice-2 split point stands as agreed
+at gate 4, and the one finding PR #27 raised against it — that a name-lookup assertion for test
+10 cannot fail against the bug it exists to catch, because `src/http/app.ts` falls back to
+`service.defaultHuman` on an unmatched `user_name` — was written into the issue body at the time,
+together with the two-link chain that reaches the same claim without a `src/` change: the
+entrypoint's startup line reports the configured name, and the escalation's `routed_to_id` equals
+its `resolved_by_id` after a tap by that name. That is a trap named and routed around in advance,
+not an open question.
 
 **The general defect is #33.** PR bodies in this repo routinely discuss issue numbers in prose,
 so any sentence containing close/fixes/resolves followed by an issue number will silently close
