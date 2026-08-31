@@ -5,12 +5,15 @@ gate_1_product: approved 2026-08-29 (all six gaps; step 1 survives the readout)
 gate_2_architecture: approved 2026-08-29 (pnpm test runs both suites; CI filed separately)
 gate_3_design: approved 2026-08-29 (child process accepted; test 15 kept, narrowly scoped)
 gate_3_amendment_1: approved 2026-08-30 (injected SlackFake; tap() becomes a free function)
-gate_4_slices: approved 2026-08-30, revision 2 (seven slices; slice 0 split; queue written)
-slices_completed: 6 / 9
-tests_landed: 14 / 26
-status_as_of: 2026-08-31T09:00Z
+gate_4_slices: approved 2026-08-31, revision 3 (slice 4 split on measurement; queue written)
+slices_completed: 8 / 10
+tests_landed: 19 / 26
+status_as_of: 2026-08-31T14:15Z
 open_questions:
-  - none blocking. #26, #28 and #9 are all claimable as they stand.
+  - none blocking. #38 and #39 are the only slices left and both are claimable as they stand.
+  - housekeeping, not blocking: #28 still carries factory:awaiting-review although its PR
+    (#37) merged at 13:47Z. A closed-out item holding a live queue label is the same
+    disagreement that hid #28's own work for a day. A human owns closing it.
   - not blocking, carried for a later reader: making a principal's display_name observable
     on a wire surface would be a src/ change and a product decision. FQ-3 does not need it —
     test 10 reaches the same claim by another route — and no issue is filed for it.
@@ -23,9 +26,10 @@ was approved.
 
 ## Slices
 
-Nine, not the seven approved at gate 4. Slices 2 and 3 each split during implementation; both
-splits are recorded on their issues. Test numbering follows `03-design.md`; slice 0a's tracer
-is unnumbered, which is why the denominator is 26 and not 25.
+Ten, not the seven approved at gate 4. Slices 2 and 3 each split during implementation and
+slice 4 split at gate 4 revision 3; all three splits are recorded on their issues. Test
+numbering follows `03-design.md`; slice 0a's tracer is unnumbered, which is why the denominator
+is 26 and not 25.
 
 | Issue | Slice | Tests | State | Evidence |
 |---|---|---|---|---|
@@ -33,18 +37,23 @@ is unnumbered, which is why the denominator is 26 and not 25.
 | #18 | 0b — Slack fake, signing, full round trip | 1 | **merged** | PR #24 · `0e43740` |
 | #6 | 1 — round-trip edge cases | 2–5 | **merged** | PR #25 · `5344776` |
 | #7 | 2a — the entrypoint spawned as a process | 6, 9, 11 | **merged** | PR #27 · `79f4c53` |
-| #26 | 2b — signing secret and principal config | 7, 8, 10 | `ready-to-implement` | reopened and promoted 2026-08-31 |
+| #26 | 2b — signing secret and principal config | 7, 8, 10 | **merged** | PR #36 · `d29c05a` |
 | #8 | 3a — Slack delivery over a real socket | 12–15 | **merged** | PR #29 · `9bbdabb` |
-| #28 | 3b — digest delivery | 16, 17 | `ready-to-implement` | claimable now |
-| #9 | 4 — resources and concurrent agents | 18–24 | `ready-to-implement` | claimable now |
+| #28 | 3b — digest delivery | 16, 17 | **merged** | PR #37 · `759364e` |
+| #9 | 4 — **split into 4a + 4b** | 18–24 | closed as split | gate 4 rev 3, 2026-08-31 |
+| #38 | 4a — resources | 18–20 | `ready-to-implement` | written, 208 lines, green · `547a4ac` |
+| #39 | 4b — concurrent agents | 21–24 | `ready-to-implement` | written, 280 lines, green · `547a4ac` |
 | #10 | 5 — restart boundary tripwire | 25 | **merged** | PR #31 · `4636cc8` |
 
-Fourteen integration tests are on `main`, in six files, all green at `full` gates. The twelve
-not yet written are tests 7, 8, 10 (#26), 16, 17 (#28) and 18–24 (#9).
+Nineteen integration tests are on `main`, in eight files, all green at `full` gates. The seven
+not on `main` are tests 18–24, which **are** written and green but parked on `claude/fq-9` at
+`547a4ac` pending the 4a/4b split. Every other slice has landed.
 
 ## Two slices left the queue without landing
 
-Both were closed as *completed* while their tests did not exist. Both have been reopened.
+Both were closed as *completed* while their tests did not exist. Both were reopened, and
+**both have since landed** — #26 as PR #36 and #28 as PR #37. The history stays because the
+mechanism that lost them is still live; #33 tracks the fix.
 
 **#28 (slice 3b) — accidental, reopened 2026-08-31.** PR #29's body contained the sentence
 "If you prefer that fork, close #28 and …" — a conditional describing an option. GitHub read
@@ -69,7 +78,8 @@ port may answer questions addressed to the accountable human — and the transcr
 those answers to that human. The test does not fix that. It pins it as an explicit fact so the
 behaviour cannot be discovered by accident later. Dropping it drops the record, not the risk.
 
-**#26 was promoted to `ready-to-implement` on 2026-08-31**, its blocker (#7) having merged as
+**#26 has since merged as PR #36 (`d29c05a`), landing tests 7, 8 and 10.** It was promoted to
+`ready-to-implement` on 2026-08-31, its blocker (#7) having merged as
 `79f4c53`. Nothing about it is outstanding for a human. The slice-2 split point stands as agreed
 at gate 4, and the one finding PR #27 raised against it — that a name-lookup assertion for test
 10 cannot fail against the bug it exists to catch, because `src/http/app.ts` falls back to
@@ -102,11 +112,11 @@ two PRs, whose bodies are immutable history.
   suite exists to catch. No new harness code is needed; `server-proc.ts` already takes `env`
   and an optional pinned `port`.
 
-## Why there are nine slices and not seven
+## Why there are ten slices and not seven
 
-Gate 4 approved seven. Three splits happened during implementation, each because a slice
-measured over Charter §7's 400-line ceiling or hit an undeclared dependency. None of them
-trimmed a test to fit.
+Gate 4 approved seven. Four splits have happened since, each because a slice measured over
+Charter §7's 400-line ceiling or hit an undeclared dependency. None of them trimmed a test to
+fit.
 
 - **Slice 0 → 0a + 0b**, before any implementation, after a run measured 515 lines against a
   ~330 estimate. This one required a gate 3 amendment: `harness/purview.ts` imported `sign.ts`
@@ -119,23 +129,34 @@ trimmed a test to fit.
   17 need a digest to actually be delivered, and the only route to that at integration altitude
   is the spawned entrypoint from slice 2a, which the spec did not list as a blocker. No
   pre-agreement covered this one, which is why it needed the human decision recorded above.
+- **Slice 4 → 4a + 4b**, at 488 measured lines, in gate 4 revision 3. This file predicted the
+  split and asked for the seam to be agreed in advance; that prediction lived here and in
+  `04-slices.md` but not in the issue's `factory-handoff:v1` comment, which is what an
+  implement run reads. So the run claimed the slice whole, wrote all seven tests, went green,
+  measured, and stopped — correct behaviour, and one whole run's work parked to get there.
+  Revision 3 adds the rule that a named seam belongs in the handoff comment.
 
 ## Estimates ran high on every slice that has been measured
 
 `04-slices.md` already warned that estimates are not budget, on the strength of one measured
-miss. Six slices in, the direction is consistent and the magnitude is not shrinking:
+miss. Seven slices in, the direction is consistent and the magnitude is not shrinking:
 
 | Slice | Estimated | Measured | Variance |
 |---|---|---|---|
 | 0 (before the split) | ~330 | 515 | +56% |
 | 2 (before the split) | ~280 | 490 | +75% |
 | 3a alone (4 of slice 3's 6 tests) | ~220 for all six | 264 | +20% for two-thirds of the scope |
+| 4 (before the split) | ~250 | 488 | **+95%** |
 
-Slice 4 (#9) is estimated at ~250 for seven tests and is the largest thing left. On the
-per-test rate slice 3a actually measured, seven tests is well over the ceiling. **Read #9 as
-likely to need a split, and prefer agreeing its split point before a run claims it** — the
-difference between slice 2 (split cleanly, no spec run) and slice 3 (stopped, needed a human)
-was entirely whether the seam had been named in advance.
+**The slice-4 prediction this section carried was right, and it did not help.** It said to read
+#9 as likely to need a split and to agree the seam before a run claimed it. The seam was never
+written into #9's handoff comment, so the run that claimed it never saw the warning — the
+contract makes that comment authoritative, and correctly so, because a snapshot file is not a
+handoff. Revision 3 fixes the mechanism rather than restating the prediction.
+
+At ~70 measured lines per test, **no slice above five tests fits under the ceiling.** Slice 3b
+(#28) was two tests and landed without incident. Any future slice should be sized against that
+rate rather than against a fresh estimate.
 
 ## Standing instructions
 
@@ -168,6 +189,13 @@ deleted.** Do not merge it: it is the diff the ceiling stopped.
   but it degrades every flow metric derived from these runs, including this file's dates.
 - #33 — a PR body's prose can silently close a queue item (`ready-to-spec`, load-bearing).
   Filed off the back of #28 above; #26 may be a second instance.
+- #40 — `workitem://{id}/tree` is unreadable unless *both* `depth` and `attention_only` are
+  supplied (`ready-to-spec`). Found writing test 18. Slice 4a's tests spell out both variables
+  and record why; that documents the edge rather than fixing it.
+- #41 — the claim protocol locks the branch, not the working tree, so two local runs in one
+  checkout collide silently (`ready-to-spec`, load-bearing). Observed during the slice 4 run,
+  not hypothesised: a branch switch moved `HEAD` out from under a live run on #28. Repaired at
+  the time; nothing on `main` is affected.
 
 ## Run records
 
@@ -181,3 +209,6 @@ deleted.** Do not merge it: it is the diff the ceiling stopped.
 - `docs/factory/runs/2026-08-30T232000Z-implement-7.md` — slice 2a (timestamp wrong, see #32)
 - `docs/factory/runs/2026-08-30T235500Z-implement-8.md` — slice 3a (timestamp wrong, see #32)
 - `docs/factory/runs/2026-08-31T071843Z-implement-10.md` — slice 5
+- `docs/factory/runs/2026-08-31T132508Z-implement-9.md` — slice 4, stopped at 488 lines; the
+  measurement gate 4 revision 3 is built on
+- `docs/factory/runs/2026-08-31T134100Z-spec-9.md` — gate 4 revision 3, the 4a/4b split
