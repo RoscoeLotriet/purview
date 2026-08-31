@@ -1,11 +1,43 @@
 # FQ-3 · Gate 4 — Slices
 
-**Revision 2, 2026-08-30.** Supersedes the plan approved 2026-08-29, which cut slice 0 as a
+**Revision 3, 2026-08-31.** Splits slice 4 into 4a and 4b, on measurement rather than on
+estimate: the slice was written in full, came back green, and measured 488 lines. Only the
+slice-4 section, the estimates table and the wave plan change; every other slice stands as
+revision 2 approved it.
+
+**Revision 2, 2026-08-30.** Superseded the plan approved 2026-08-29, which cut slice 0 as a
 single unit. Revision 1 is in git history at `bbeb7d5`; it is superseded, not deleted, because
 the reason it was wrong is the most useful thing in this document.
 
 Gate 3 amendment 1 approved 2026-08-30: the harness takes an injected `SlackFake` rather than
 starting one, and `tap()` is a free function in its own module.
+
+## Why revision 3 exists, in one number
+
+Revision 2 estimated slice 4 at ~250 lines and the status file warned it was "likely to need a
+split", asking for the seam to be agreed before a run claimed it. That warning was not acted on,
+so implementation run `2026-08-31T132508Z-implement-9` claimed the slice whole and hit the
+ceiling with the work already written.
+
+**It measured 488 lines against a 400 ceiling — 95% over estimate, the worst variance in this
+spec.** The run stopped rather than trimming, exactly as the standing instruction says.
+
+Nothing about the work is in question. All seven tests pass, no file was modified, nothing under
+`src/` was touched, and gates were green at `full`:
+
+```
+FACTORY_GATES: level=full status=GREEN passed=4 failed=0 failing=none skipped=none misconfigured=none
+```
+
+The work is parked on `claude/fq-9` at `547a4ac`, which is **evidence, not a shippable diff**.
+It must not become a pull request as it stands — it is over the ceiling by construction. Both
+slices below are clean cherry-picks from it, so this split costs a rebase, not a rewrite.
+
+The lesson is narrower than revision 2's and worth stating plainly: **a named split point is
+only useful if a run is required to read it before claiming.** Slice 2 split cleanly at a
+pre-agreed seam with no spec run; slice 3 and now slice 4 both stopped a run and needed a human.
+The difference each time was whether the seam had been written into the issue's handoff comment,
+not whether it had been written down somewhere.
 
 ## Why revision 1 was wrong, in numbers
 
@@ -153,19 +185,58 @@ becomes the actual entrypoint, spawned.
   carries a comment naming issue #12 as the reason it will later be inverted.
 - **~220** *estimated* · **gate_level:** full · **confidence:** high
 
-### Slice 4 — Resources and concurrent agents · `wait-to-implement` (0b) · issue #9
+### Slice 4 — split into 4a and 4b at revision 3 · issue #9 retired
 
-- **Tests:** 18–20 (resources, incl. **test 19**, the template-ordering invariant), 21–24
-  (concurrency)
-- **New files:** `tests/integration/resources.integration.test.ts`,
-  `tests/integration/concurrent-agents.integration.test.ts`
-- **done_when:** all seven pass; test 19 fails if the bare `workitem://{id}` template is
-  registered before the more specific ones; the concurrency file carries the gate-2 scope note
-  that these prove `await`-interleaving safety only.
-- **~250** *estimated* · **gate_level:** full · **confidence:** high
-- **Note:** tests 18–23 need only slice 0a. Only test 24 (two agents' blocking escalations
-  resolve independently) needs the tap from 0b. If review capacity is the binding constraint
-  and 0b is still open, this slice can be promoted early with test 24 deferred.
+The split runs along the file boundary, which is also the test-group boundary. **No test moves
+and no test is trimmed**; each file goes to its own slice exactly as written and measured.
+
+Both are cherry-picks from `claude/fq-9` at `547a4ac`. Neither depends on the other, so they
+may run in either order or in parallel if review capacity allows.
+
+### Slice 4a — Resources · `ready-to-implement` · issue #38
+
+The four MCP resources over the real transport, which no test reaches today. They are
+registered at `src/mcp/server.ts:269,287,309,321` with `{ list: undefined }`, so
+`resources/list` will not enumerate them — every read is by URI.
+
+- **Tests:** 18–20, including **test 19**, the template-ordering invariant
+- **New file:** `tests/integration/resources.integration.test.ts`
+- **done_when:** tests 18–20 pass; test 19 fails if the bare `workitem://{id}` template is
+  registered before the more specific ones; no file under `src/` is modified; gates report
+  `FACTORY_GATES status=GREEN` at `full`.
+- **208** **measured** · **gate_level:** full · **confidence:** high
+- **Depends on:** slice 0a's harness only. Nothing else.
+
+**Test 19's invariant is weaker than revision 2 assumed, and the slice carries the correction.**
+Revision 2 called test 19 "the valuable one" on the premise that reordering the registrations
+would let the bare `workitem://{id}` template swallow `workitem://{id}/tree`. The implement run
+reordered them by hand and re-ran: **it does not.** With the SDK version in this lockfile `{id}`
+does not match across a `/`, so the tree URI resolves correctly however the registrations are
+ordered. The comment in `src/mcp/server.ts` is defensive, not load-bearing today.
+
+The `done_when` clause survives intact because the test reaches it by another route:
+`resources/templates/list` enumerates templates in registration order, so asserting the bare
+template is listed last is that code comment made executable, and it was verified to fail on a
+hand-reorder (`AssertionError: expected 0 to be greater than 1`). The test asserts both halves
+and says in a comment which is which, so no later reader cites it as proof of more than it
+shows. **An implementation that drops either half has not met the clause.**
+
+### Slice 4b — Concurrent agents · `ready-to-implement` · issue #39
+
+`src/http/app.ts:29-35` builds a **new** protocol server per POST against **one** shared
+`PurviewService`. That is the normal deployment condition and nothing tests it.
+
+- **Tests:** 21–24
+- **New file:** `tests/integration/concurrent-agents.integration.test.ts`
+- **done_when:** tests 21–24 pass; the file carries the gate-2 scope note that these prove
+  `await`-interleaving safety only, not thread safety and not multi-process safety; no file
+  under `src/` is modified; gates report `FACTORY_GATES status=GREEN` at `full`.
+- **280** **measured** · **gate_level:** full · **confidence:** high
+- **Depends on:** slice 0a's harness, plus slice 0b's `tap` for test 24. Both have merged.
+
+The scope note is a `done_when` clause and not a nicety. Node is single-threaded; without it a
+future reader cites these tests as proof of thread safety or multi-process safety, which they do
+not show and cannot show while v0 has no shared store to contend over.
 
 ### Slice 5 — Restart boundary · `wait-to-implement` (slice 2) · issue #10
 
@@ -182,6 +253,20 @@ slice 2 would land at ~437 and slices 3 and 4 in the high 300s. That is not a pr
 one data point is not a correction factor — but it is enough that these estimates must not be
 treated as headroom.
 
+**Four slices in, every measurement has come in over, and the spread is widening.** Revision 3
+adds the fourth and worst point:
+
+| Slice | Estimated | Measured | Variance |
+|---|---|---|---|
+| 0 (before the split) | ~330 | 515 | +56% |
+| 2 (before the split) | ~280 | 490 | +75% |
+| 3a alone (4 of slice 3's 6 tests) | ~220 for all six | 264 | +20% for two-thirds of the scope |
+| 4 (before the split) | ~250 | 488 | **+95%** |
+
+Slice 4 was estimated at ~36 lines per test and landed at ~70. On that rate nothing above five
+tests fits under the ceiling in one slice, and the two remaining unwritten slices should be read
+against ~70 per test rather than against their revision-1 estimates.
+
 **Standing instruction for every slice below 0a and 0b.** Measure before opening the PR, with
 the command Charter §7 now specifies:
 
@@ -196,6 +281,15 @@ cost rather than paid it. Slice 2 has its split point pre-agreed above. For any 
 stopping and asking is correct and expected — that is the stop condition working, not a run
 failing.
 
+**Added at revision 3: a split point that lives only in this file does not reach the run that
+needs it.** Slice 4's status entry said it was likely to need a split and asked for the seam to
+be agreed in advance; the implement run read the issue's `factory-handoff:v1` comment, which is
+what the contract makes authoritative, and that comment said nothing about a seam. So a named
+seam must be written **into the issue's handoff comment**, not only here. Where a slice is
+suspected of exceeding the ceiling, its handoff carries the seam and the instruction to split at
+it without a spec run — the mechanism that made slice 2 cheap and its absence what made slices 3
+and 4 expensive.
+
 ## Wave plan
 
 Charter §7 stops the factory when more than 3 items are awaiting human review, so sequencing
@@ -206,10 +300,19 @@ is a constraint, not a suggestion. Revision 1 had three waves; the 0a/0b split a
 | 1 | 0a | 1 PR — everything depends on it, nothing runs beside it |
 | 2 | 0b | 1 PR — same reason; slices 1–4 all consume its files |
 | 3 | 1, 2, 3 | 3 PRs — exactly at the charter limit |
-| 4 | 4, 5 | 2 PRs |
+| 4 | 4a, 4b, 5 | 3 PRs — at the limit; the split spends the slack wave 4 used to have |
 
-If a wave-3 item is rejected, slice 4 can be promoted to fill the gap (see its note — most of
-it needs only 0a).
+Revision 3's split costs one review slot. Wave 4 was two PRs and is now three, which is exactly
+the charter limit.
+
+In practice the constraint has already relaxed: by the time revision 3's queue entries were
+written, slice 5 (PR #31), 2b (PR #36) and 3b (PR #37) had all merged, so **4a and 4b are the
+only slices left in FQ-3** and the review queue is empty. Two PRs against a limit of three
+leaves one slot spare — the wave table describes the plan, not the live constraint.
+
+The split also removes the promotion note revision 2 carried. Slice 4a needs only 0a and slice
+4b needs 0b, both of which merged; neither is blocked on anything, and there is nothing left to
+promote early.
 
 ## What happens to `archive/fq-5-slice0-original`
 
@@ -229,6 +332,22 @@ Close it once 0b merges.
 
 ## What this revision deliberately did not decide
 
+**Revision 3 additions:**
+
+- **Whether `src/mcp/server.ts`'s registration-order comment should be reworded.** It now
+  describes an ordering the SDK's matcher makes unnecessary, so it is misleading rather than
+  wrong. Touching it is a `src/` change for a comment, and slice 4a's test carries the
+  correction where a reader will meet it. Not filed.
+- **Whether the tree resource should match without both query variables.** Filed as **#40**:
+  `workitem://{id}/tree{?depth,attention_only}` returns `Resource not found` unless *both*
+  `depth` and `attention_only` are present, and nothing tells an agent that. Real, needs `src/`,
+  outside FQ-3's scope of pinning behaviour rather than changing it.
+- **How an implement run should isolate its checkout.** Filed as **#41**, off the back of this
+  run: the deterministic remote-branch claim locks the branch, not the working tree, so two
+  local runs in one checkout collide silently. Not an FQ-3 defect, but FQ-3's run surfaced it.
+
+**Carried from revision 2, unchanged:**
+
 - Whether Charter §3 covers non-`*.test.ts` helpers under `tests/`. Routed around by design so
   the suite needs no waiver. The question is still open and still worth answering, because the
   next spec that wants a shared helper will hit it again.
@@ -237,5 +356,10 @@ Close it once 0b merges.
 
 ---
 
-**STOP — gate 4 awaiting approval.** No GitHub issue, label, handoff comment or `QUEUE.md`
-entry is written until this is approved.
+**Gate 4 revision 2 approved 2026-08-30.** Its queue entries were written and seven of its
+slices have merged.
+
+**Gate 4 revision 3 approved 2026-08-31.** Queue entries written the same day: #38 (slice 4a)
+and #39 (slice 4b), both `factory:ready-to-implement`, each carrying a `factory-handoff:v1`
+comment with the `done_when` above. #9 closed as split, with no queue-state label left on it —
+a closed issue holding a live label is the exact disagreement that hid #28's work for a day.

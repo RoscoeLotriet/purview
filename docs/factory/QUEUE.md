@@ -24,71 +24,50 @@ The corresponding live labels use the `factory:` prefix, for example
 
 ---
 
-_Snapshot written by `factory-triage` on 2026-08-31, superseding the `factory-spec` snapshot
-of 2026-08-30 (PR #14). Live labels are the source of truth._
+_Snapshot updated by `factory-spec` on 2026-08-31 (gate 4 revision 3), superseding the
+`factory-triage` snapshot of the same day. Live labels are the source of truth._
 
-Since the prior snapshot, slices #5, #18, #6 and #7 merged to `main`, unblocking #9, #10 and
-the newly-split #28. This run re-derived all 8 currently-open issues against
-`CHARTER.md` §2, §4 and §7, found #9, #10 and #28 blocker-free, and promoted them from
-`wait-to-implement` to `ready-to-implement`. #8, #11, #12, #23 were re-derived and left
-unchanged. #3 remains the tracking issue, still blocked on its own slices.
+**This is a spec-run update, not a re-triage.** It writes the two slices gate 4 revision 3
+approved, files two findings from the FQ-9 implement run, and corrects the entries the prior
+snapshot has since outlived. Nothing was re-derived against `CHARTER.md`; the entries carried
+forward below still say `last_triaged: 2026-08-31` from the triage run that wrote them.
 
-Counts: ready-to-implement=3 (#9, #10, #28), ready-to-spec=3 (#11, #12, #23),
-awaiting-review=1 (#8), wait-to-implement=1 (#3), needs-info=0.
+Since the prior snapshot, #10 (PR #31), #26 (PR #36) and #28 (PR #37) all merged, and #8 was
+merged as PR #29 — so every FQ-3 slice except 4a and 4b is on `main`. #9 was claimed, written
+in full, measured at 488 lines against the Charter §7 ceiling, and split into #38 and #39; it
+is closed as split with no queue-state label.
+
+Counts: ready-to-implement=2 (#38, #39), ready-to-spec=5 (#11, #12, #23, #40, #41),
+awaiting-review=0, wait-to-implement=1 (#3), needs-info=0.
+
+**The review queue is empty**, so both claimable items may run at once without approaching the
+Charter §7 limit of three.
 
 ## Claimable now
 
-## FQ-28: integration slice 3b — digest delivery
+## FQ-38: integration slice 4a — resources
 - disposition: ready-to-implement
-- source: https://github.com/RoscoeLotriet/purview/issues/28
-- last_triaged: 2026-08-31
+- source: https://github.com/RoscoeLotriet/purview/issues/38
+- last_triaged: 2026-08-31 (written by factory-spec, gate 4 revision 3)
 - repro: not-attempted (new test coverage, not a bug report)
-- files_expected: tests/integration/digest-delivery.integration.test.ts
+- files_expected: tests/integration/resources.integration.test.ts
 - load_bearing: false
 - gate_level: full
-- done_when: tests 16 and 17 pass in a new file against a spawned entrypoint driving its own digest cadence; test 16 asserts both the absence of an individual card and the presence of the escalation in a delivered digest; test 17 asserts the resolved entry carries no `actions` block; no file under `src/` and no existing test file is modified
-- confidence: medium
-- notes: Split out of #8 during implementation (undeclared dependency on #7's `server-proc.ts`). Blocker (#7, PR #27, `79f4c53`) merged 2026-08-30. Promoted this run. `confidence: medium` — real-timer digest cadence in a child process plus severity-band arithmetic are two things that must both be right. A human should still confirm the 3a/3b split named in #8 and #29 before this lands.
+- done_when: tests 18–20 pass; test 19 asserts both that `workitem://{id}/tree` resolves to the tree resource and that `resources/templates/list` places the bare `workitem://{id}` template after the more specific ones, so it fails if the registrations are reordered; no file under `src/` is modified; gates GREEN at `full`
+- confidence: high
+- notes: Split out of #9 on measurement. **208 lines measured, not estimated** — the work exists on `claude/fq-9` at `547a4ac`, green, as a clean cherry-pick. That branch must not become a PR as it stands. Test 19 has two halves and both are required: revision 2's premise that reordering lets the bare template swallow the tree URI was tested by hand and is false with the SDK in this lockfile, so the order assertion reaches the invariant through `resources/templates/list` instead. Every tree URI must spell out both query variables (#40).
 
-## FQ-10: integration slice 5 — restart boundary tripwire
+## FQ-39: integration slice 4b — concurrent agents
 - disposition: ready-to-implement
-- source: https://github.com/RoscoeLotriet/purview/issues/10
-- last_triaged: 2026-08-31
+- source: https://github.com/RoscoeLotriet/purview/issues/39
+- last_triaged: 2026-08-31 (written by factory-spec, gate 4 revision 3)
 - repro: not-attempted (new test coverage, not a bug report)
-- files_expected: tests/integration/restart-boundary.integration.test.ts
+- files_expected: tests/integration/concurrent-agents.integration.test.ts
 - load_bearing: false
 - gate_level: full
-- done_when: work created before `SIGTERM` is absent after a restart on the same port; test carries a comment naming it as the tripwire a durable store must deliberately flip; no file under `src/` is modified
+- done_when: tests 21–24 pass; the file carries the gate-2 scope note that these prove `await`-interleaving safety only, not thread safety and not multi-process safety; no file under `src/` is modified; gates GREEN at `full`
 - confidence: high
-- notes: Blocker was #7 (slice 2, `server-proc.ts`). Merged 2026-08-30 as `79f4c53` (PR #27). Promoted this run. ~70 lines estimated, smallest of the remaining slices.
-
-## FQ-9: integration slice 4 — resources and concurrent agents
-- disposition: ready-to-implement
-- source: https://github.com/RoscoeLotriet/purview/issues/9
-- last_triaged: 2026-08-31
-- repro: not-attempted (new test coverage, not a bug report)
-- files_expected: tests/integration/resources.integration.test.ts, tests/integration/concurrent-agents.integration.test.ts
-- load_bearing: false
-- gate_level: full
-- done_when: tests 18–24 pass; test 19 fails if the bare `workitem://{id}` template is registered before the more specific ones; the concurrency file carries the gate-2 scope note that these prove await-interleaving safety only; no file under `src/` is modified
-- confidence: high
-- notes: Blocker was #18 (slice 0b — the tap, needed only for test 24). #18 closed `completed` 2026-08-30. All of 18–24 unblocked, not just 18–23. Promoted this run in full. ~250 lines estimated.
-
----
-
-## In review
-
-## FQ-8: integration slice 3a — Slack delivery and failure modes
-- disposition: awaiting-review
-- source: https://github.com/RoscoeLotriet/purview/issues/8
-- last_triaged: 2026-08-31
-- repro: confirmed (tests 12–15 pass, gates GREEN at full)
-- files_expected: tests/integration/slack-delivery.integration.test.ts
-- load_bearing: false
-- gate_level: full
-- done_when: tests 12–15 pass; test 15 scoped to the escalation record's own fields with a comment naming #12 as the reason it will later be inverted; no file under `src/` modified
-- confidence: high
-- notes: PR #29 open (draft), verifier accepted with reservations (all fixed). Not re-triaged into a queue-state disposition — `awaiting-review` is the correct state for an issue with an open PR and belongs to a human's decision, not to this run's four dispositions. Scope narrowed in place from tests 12–17 to 12–15; tests 16–17 are #28.
+- notes: Split out of #9 on measurement. **280 lines measured, not estimated** — same parked branch, same cherry-pick, same prohibition on turning it into a PR. The scope note is a `done_when` clause: Node is single-threaded and without it these four tests get cited as proof of thread safety. Independent of #38; neither blocks the other.
 
 ---
 
@@ -102,9 +81,9 @@ awaiting-review=1 (#8), wait-to-implement=1 (#3), needs-info=0.
 - files_expected: (none — tracking issue)
 - load_bearing: false
 - gate_level: full
-- done_when: all of #5, #18, #6, #7, #8, #9, #10, #28 merged
+- done_when: all of #5, #18, #6, #7, #8, #10, #26, #28, #38, #39 merged
 - confidence: high
-- notes: #5, #18, #6, #7 merged. #8 in review (PR #29). #9, #10, #28 promoted to `ready-to-implement` this run. Closes when the rest land.
+- notes: Eight of ten slices are on `main`; 19 of 26 tests have landed. Only #38 and #39 remain. `done_when` restated this run because #9 no longer exists as a slice — it split into #38 and #39 — and because #26 was never listed, having been split out of #7 during implementation.
 
 ---
 
@@ -145,6 +124,30 @@ awaiting-review=1 (#8), wait-to-implement=1 (#3), needs-info=0.
 - done_when: a spec exists deciding (a) how gates.sh obtains a base ref and what it reports when it cannot, (b) how an approved interactive test-file edit passes without a reachable agent bypass, (c) whether it is a new gate name or folded into an existing one, and (d) whether the §7 line ceiling is enforced in the same pass — approved through factory-spec's human gates
 - confidence: medium
 - notes: Unchanged this run. `.claude/scripts/gates.sh` and `.factory/gates.conf` are both Charter §2 `LOAD_BEARING`, forcing `ready-to-spec` regardless of size. Not urgent — no CI exists (#11), no monitor run has ever fired, so there is no live unattended run this gap currently exposes.
+
+## FQ-40: `workitem://{id}/tree` is unreadable unless both `depth` and `attention_only` are supplied
+- disposition: ready-to-spec
+- source: https://github.com/RoscoeLotriet/purview/issues/40
+- last_triaged: 2026-08-31 (filed by factory-spec from the FQ-9 implement run)
+- repro: confirmed (measured over the real transport: bare, `?depth=1` and `?attention_only=true` all return `Resource not found`; only both together match)
+- files_expected: src/mcp/server.ts (and whatever the approved spec adds)
+- load_bearing: false
+- gate_level: full
+- done_when: a spec exists and is approved through factory-spec's human gates
+- confidence: high
+- notes: One template cannot express "either, both, or neither" in RFC 6570 form-style expansion, so this is a shape decision, not a bug fix. The tool surface (`work_query`) treats both arguments as genuinely optional, so the two paths to the same query disagree. Slice 4a's tests document the edge; they do not fix it.
+
+## FQ-41: the claim protocol locks the branch, not the working tree
+- disposition: ready-to-spec
+- source: https://github.com/RoscoeLotriet/purview/issues/41
+- last_triaged: 2026-08-31 (filed by factory-spec from the FQ-9 implement run)
+- repro: confirmed (observed 2026-08-31: creating `claude/fq-9` moved `HEAD` out from under a live run on #28 in the same checkout)
+- files_expected: docs/factory/CONTRACT.md, .claude/skills/factory-implement/**
+- load_bearing: true
+- gate_level: deep
+- done_when: a spec exists and is approved through factory-spec's human gates
+- confidence: high
+- notes: Both runs won their claims correctly; the remote ref is a lock on issue ownership and it worked. The unprotected resource is the local checkout. Failure mode is silent, cross-contaminating and invisible to the gates — a disrupted run's commit lands on the other run's branch, inside the other run's PR. An agent may not rewrite its own claim protocol unattended in any case.
 
 ---
 
