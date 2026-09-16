@@ -24,111 +24,89 @@ The corresponding live labels use the `factory:` prefix, for example
 
 ---
 
-_Snapshot updated by `factory-spec` on 2026-08-31 (gate 4 revision 3), superseding the
-`factory-triage` snapshot of the same day. Live labels are the source of truth._
+_Snapshot rebuilt by `factory-triage` on 2026-09-16, superseding the `factory-spec` snapshot of
+2026-08-31 (gate 4 revision 3). Live labels are the source of truth._
 
-**This is a spec-run update, not a re-triage.** It writes the two slices gate 4 revision 3
-approved, files two findings from the FQ-9 implement run, and corrects the entries the prior
-snapshot has since outlived. Nothing was re-derived against `CHARTER.md`; the entries carried
-forward below still say `last_triaged: 2026-08-31` from the triage run that wrote them.
+**Full re-derivation, not a delta.** The version of this file on `main` predates the entire
+FQ-3 chain finishing and the entire FQ-23 chain existing, and would read as current when it is
+not. Since the prior snapshot: `#3` (the FQ-3 parent) and all ten of its slices — `#5, #6, #7,
+#8, #9, #10, #18, #26, #28, #38, #39` — closed; every one merged to `main`. Six new issues
+opened and were triaged before this run without a matching `docs/factory/runs/` record (see
+"Run-record gap" in this run's record under `docs/factory/runs/`): `#32`, `#33`, `#40`, `#41`
+on 2026-09-01, and `#23` was re-specced and split into six `gates.sh` slices (`#23` itself plus
+new issues `#46`–`#51`) on 2026-08-31/09-01, with `#46` additionally cycled through an
+unattended implement-run stop on 2026-09-02.
 
-Since the prior snapshot, #10 (PR #31), #26 (PR #36) and #28 (PR #37) all merged, and #8 was
-merged as PR #29 — so every FQ-3 slice except 4a and 4b is on `main`. #9 was claimed, written
-in full, measured at 488 lines against the Charter §7 ceiling, and split into #38 and #39; it
-is closed as split with no queue-state label.
+This run queried GitHub directly and re-derived every open issue's disposition against
+`CHARTER.md` rather than trusting the labels or the existing `factory-handoff:v1` comments.
+**All 13 open issues already carried a state label** (0 untriaged). **11 of 13 had been
+updated since the prior triage run's `finished_at` (2026-08-31T06:08:15Z)** and were
+re-examined in full; `#11` and `#12` had not changed and were not re-examined, per the skill's
+scope rule. Cap is 20; nothing was skipped.
 
-Counts: ready-to-implement=2 (#38, #39), ready-to-spec=5 (#11, #12, #23, #40, #41),
-awaiting-review=0, wait-to-implement=1 (#3), needs-info=0.
+**Every re-examined disposition matched its existing label and handoff comment exactly.** No
+label changes, no handoff-comment updates, and no reclassifications this run — see the run
+record for the per-issue derivation.
 
-**The review queue is empty**, so both claimable items may run at once without approaching the
-Charter §7 limit of three.
+Counts: ready-to-implement=0, ready-to-spec=6 (#11, #12, #32, #33, #40, #41),
+wait-to-implement=7 (#23, #46, #47, #48, #49, #50, #51), needs-info=0, awaiting-review=0.
 
-## Claimable now
-
-## FQ-38: integration slice 4a — resources
-- disposition: ready-to-implement
-- source: https://github.com/RoscoeLotriet/purview/issues/38
-- last_triaged: 2026-08-31 (written by factory-spec, gate 4 revision 3)
-- repro: not-attempted (new test coverage, not a bug report)
-- files_expected: tests/integration/resources.integration.test.ts
-- load_bearing: false
-- gate_level: full
-- done_when: tests 18–20 pass; test 19 asserts both that `workitem://{id}/tree` resolves to the tree resource and that `resources/templates/list` places the bare `workitem://{id}` template after the more specific ones, so it fails if the registrations are reordered; no file under `src/` is modified; gates GREEN at `full`
-- confidence: high
-- notes: Split out of #9 on measurement. **208 lines measured, not estimated** — the work exists on `claude/fq-9` at `547a4ac`, green, as a clean cherry-pick. That branch must not become a PR as it stands. Test 19 has two halves and both are required: revision 2's premise that reordering lets the bare template swallow the tree URI was tested by hand and is false with the SDK in this lockfile, so the order assertion reaches the invariant through `resources/templates/list` instead. Every tree URI must spell out both query variables (#40).
-
-## FQ-39: integration slice 4b — concurrent agents
-- disposition: ready-to-implement
-- source: https://github.com/RoscoeLotriet/purview/issues/39
-- last_triaged: 2026-08-31 (written by factory-spec, gate 4 revision 3)
-- repro: not-attempted (new test coverage, not a bug report)
-- files_expected: tests/integration/concurrent-agents.integration.test.ts
-- load_bearing: false
-- gate_level: full
-- done_when: tests 21–24 pass; the file carries the gate-2 scope note that these prove `await`-interleaving safety only, not thread safety and not multi-process safety; no file under `src/` is modified; gates GREEN at `full`
-- confidence: high
-- notes: Split out of #9 on measurement. **280 lines measured, not estimated** — same parked branch, same cherry-pick, same prohibition on turning it into a PR. The scope note is a `done_when` clause: Node is single-threaded and without it these four tests get cited as proof of thread safety. Independent of #38; neither blocks the other.
-
----
-
-## Blocked on its own slices
-
-## FQ-3: integration suite covering the step-1 seams (parent)
-- disposition: wait-to-implement
-- source: https://github.com/RoscoeLotriet/purview/issues/3
-- last_triaged: 2026-08-31
-- repro: not-attempted (tracking issue, no code of its own)
-- files_expected: (none — tracking issue)
-- load_bearing: false
-- gate_level: full
-- done_when: all of #5, #18, #6, #7, #8, #10, #26, #28, #38, #39 merged
-- confidence: high
-- notes: Eight of ten slices are on `main`; 19 of 26 tests have landed. Only #38 and #39 remain. `done_when` restated this run because #9 no longer exists as a slice — it split into #38 and #39 — and because #26 was never listed, having been split out of #7 during implementation.
-
----
+**The review queue is empty**, so no item is held back by Charter §7's cap of three.
 
 ## Needs a human spec run
 
 ## FQ-11: run the factory gates automatically on every push
 - disposition: ready-to-spec
 - source: https://github.com/RoscoeLotriet/purview/issues/11
-- last_triaged: 2026-08-31
+- last_triaged: 2026-08-31 (not re-examined this run — unchanged since then)
 - repro: not-attempted (no CI exists yet — nothing to reproduce)
 - files_expected: .github/workflows/**
 - load_bearing: true
 - gate_level: deep
 - done_when: a spec exists and is approved through factory-spec's human gates
 - confidence: high
-- notes: Unchanged this run. `.github/workflows/**` is Charter §2 `LOAD_BEARING`, which Charter §4 `NEEDS_SPEC` names directly.
+- notes: `.github/workflows/**` is Charter §2 `LOAD_BEARING`, which Charter §4 `NEEDS_SPEC` names directly.
 
 ## FQ-12: record Slack delivery outcome so a dropped escalation is observable
 - disposition: ready-to-spec
 - source: https://github.com/RoscoeLotriet/purview/issues/12
-- last_triaged: 2026-08-31
+- last_triaged: 2026-08-31 (not re-examined this run — unchanged since then)
 - repro: confirmed (`src/service/purview.ts:727-736` swallows every bridge failure — read, not executed)
 - files_expected: src/service/purview.ts (and whatever the approved spec adds)
 - load_bearing: false
 - gate_level: full
 - done_when: a spec exists and is approved through factory-spec's human gates
 - confidence: high
-- notes: Unchanged this run. Product-intent decision (what gets recorded, whether delivery failure changes escalation behaviour) — Charter §4 `NEVER_AUTOMATE` names product intent directly. #8's test 15 is written to be inverted when this lands.
+- notes: Product-intent decision (what gets recorded, whether delivery failure changes escalation behaviour) — Charter §4 `NEVER_AUTOMATE` names product intent directly. #8's test 15 was written to be inverted when this lands.
 
-## FQ-23: gates.sh — enforce Charter §3 TESTS_PROTECTED mechanically, not just in prose
+## FQ-32: four run records carry timestamps an hour off, minted from local time and labelled Z
 - disposition: ready-to-spec
-- source: https://github.com/RoscoeLotriet/purview/issues/23
-- last_triaged: 2026-08-31
-- repro: not-attempted (a design gap, not a reproducible bug)
-- files_expected: docs/factory/specs/FQ-23/**
+- source: https://github.com/RoscoeLotriet/purview/issues/32
+- last_triaged: 2026-09-01 (re-confirmed 2026-09-16, no change)
+- repro: confirmed (each of the four records is anchored against a git or GitHub timestamp in the issue body)
+- files_expected: docs/factory/runs/2026-08-30T232000Z-implement-7.md, docs/factory/runs/2026-08-30T235500Z-implement-8.md, docs/factory/runs/2026-08-30T214126Z-tune-tests-protected.md, docs/factory/runs/2026-08-30T174947Z-implement-5.md, and whatever `.claude/skills/**` change an approved spec adds for the minting rule
 - load_bearing: true
 - gate_level: deep
-- done_when: a spec exists deciding (a) how gates.sh obtains a base ref and what it reports when it cannot, (b) how an approved interactive test-file edit passes without a reachable agent bypass, (c) whether it is a new gate name or folded into an existing one, and (d) whether the §7 line ceiling is enforced in the same pass — approved through factory-spec's human gates
+- done_when: a spec exists (or an explicit scope decision) separating the docs-only correction from the skill-minting-rule change, approved through factory-spec's human gates
 - confidence: medium
-- notes: Unchanged this run. `.claude/scripts/gates.sh` and `.factory/gates.conf` are both Charter §2 `LOAD_BEARING`, forcing `ready-to-spec` regardless of size. Not urgent — no CI exists (#11), no monitor run has ever fired, so there is no live unattended run this gap currently exposes.
+- notes: Splits into an `AUTOMATABLE` docs-only half (appending dated corrections to four immutable run records) and a `NEEDS_SPEC` half (the minting-rule fix lives in `.claude/skills/**`, Charter §2 `LOAD_BEARING`). Filed as one issue; a spec or a human should decide whether to split it.
+
+## FQ-33: a PR body's prose can silently close a queue item — two have already gone
+- disposition: ready-to-spec
+- source: https://github.com/RoscoeLotriet/purview/issues/33
+- last_triaged: 2026-09-01 (re-confirmed 2026-09-16, no change)
+- repro: confirmed (#28 closed by a merged PR body's closing-keyword sentence on 2026-08-31; #26 closed the same way, mechanism unconfirmed)
+- files_expected: docs/factory/specs/FQ-33/** (and whatever `.claude/skills/**` change an approved spec adds)
+- load_bearing: true
+- gate_level: deep
+- done_when: a spec exists deciding where the PR-body closing-keyword prohibition and its mechanical pre-`gh pr create` check live, and whether an implement run should ever be allowed to write a closing keyword against a queue issue at all
+- confidence: high
+- notes: Fix touches `.claude/skills/factory-implement/**` at minimum, Charter §2 `LOAD_BEARING`. Worth prioritizing — the review queue is empty, so nothing competes for the human-attention budget this would spend.
 
 ## FQ-40: `workitem://{id}/tree` is unreadable unless both `depth` and `attention_only` are supplied
 - disposition: ready-to-spec
 - source: https://github.com/RoscoeLotriet/purview/issues/40
-- last_triaged: 2026-08-31 (filed by factory-spec from the FQ-9 implement run)
+- last_triaged: 2026-09-01 (filed by factory-spec from the FQ-9 implement run; re-confirmed 2026-09-16, no change)
 - repro: confirmed (measured over the real transport: bare, `?depth=1` and `?attention_only=true` all return `Resource not found`; only both together match)
 - files_expected: src/mcp/server.ts (and whatever the approved spec adds)
 - load_bearing: false
@@ -140,14 +118,107 @@ Charter §7 limit of three.
 ## FQ-41: the claim protocol locks the branch, not the working tree
 - disposition: ready-to-spec
 - source: https://github.com/RoscoeLotriet/purview/issues/41
-- last_triaged: 2026-08-31 (filed by factory-spec from the FQ-9 implement run)
+- last_triaged: 2026-09-01 (filed by factory-spec from the FQ-9 implement run; re-confirmed 2026-09-16, no change)
 - repro: confirmed (observed 2026-08-31: creating `claude/fq-9` moved `HEAD` out from under a live run on #28 in the same checkout)
 - files_expected: docs/factory/CONTRACT.md, .claude/skills/factory-implement/**
 - load_bearing: true
 - gate_level: deep
 - done_when: a spec exists and is approved through factory-spec's human gates
 - confidence: high
-- notes: Both runs won their claims correctly; the remote ref is a lock on issue ownership and it worked. The unprotected resource is the local checkout. Failure mode is silent, cross-contaminating and invisible to the gates — a disrupted run's commit lands on the other run's branch, inside the other run's PR. An agent may not rewrite its own claim protocol unattended in any case.
+- notes: Both runs won their claims correctly; the remote ref is a lock on issue ownership and it worked. The unprotected resource is the local checkout. Failure mode is silent, cross-contaminating and invisible to the gates. An agent may not rewrite its own claim protocol unattended in any case.
+
+---
+
+## Blocked — the gates.sh (FQ-23) chain
+
+All seven items below need an attended human session: each edits `.claude/scripts/gates.sh`
+(`Edit`-denied in `.claude/settings.json`) or another Charter §2 `LOAD_BEARING` file, and
+Contract rule 2 forbids an unattended run from making that edit at all. `factory-spec` already
+carried this through all four gates on 2026-08-31 — nothing here is an open design question.
+
+## FQ-23: gates.sh — enforce Charter §3 TESTS_PROTECTED mechanically, not just in prose (parent)
+- disposition: wait-to-implement
+- source: https://github.com/RoscoeLotriet/purview/issues/23
+- last_triaged: 2026-09-01 (re-confirmed 2026-09-16, no change)
+- repro: not-attempted (tracking issue; the design gap itself is described, not reproduced, in the issue body)
+- files_expected: (none — tracking issue; each slice carries its own)
+- load_bearing: true
+- gate_level: deep
+- done_when: all of #46, #47, #48, #49, #50 merged; #51 is the deliberately droppable §7 line-ceiling slice and its non-merge does not block closing this item
+- confidence: high
+- notes: The spec decision this item originally asked for has already been made and approved; it is now the FQ-3-style parent tracking issue for the #46–#51 chain.
+
+## FQ-46: gates.sh slice 0 — tracer: report fields exist and travel in the machine line
+- disposition: wait-to-implement
+- source: https://github.com/RoscoeLotriet/purview/issues/46
+- last_triaged: 2026-09-02 (re-confirmed 2026-09-16, no change)
+- repro: not-attempted (new test coverage against a not-yet-written mechanism)
+- files_expected: .claude/scripts/gates.sh, tests/integration/harness/gates-proc.ts, tests/integration/gates-tracer.integration.test.ts
+- load_bearing: true
+- gate_level: deep
+- done_when: an attended human session claims this issue and approves the `.claude/scripts/gates.sh` edit in-session; `gates.sh full` then prints `base_source=`, `protected_globs=` and `protected=`; `gates.sh fast` prints `base_source=not-measured protected=not-measured`; a bash older than 3.2 prints `misconfigured=unsupported-bash` and exits 2; the three tests pass; no pre-existing test file is modified; gates GREEN at `deep`
+- confidence: high
+- notes: An unattended implement run claimed this on 2026-09-01, correctly stopped at the charter check per Contract rule 2, and self-corrected its own label from `ready-to-implement` to `ready-to-spec`. Triage moved it to `wait-to-implement` instead — the blocker is a named dependency (an attended session), not an undecided scope question, which is what `wait-to-implement` means and `ready-to-spec` does not. Every future scheduled triage or implement run should leave this whole chain unattended-ineligible rather than re-deriving the same stop.
+
+## FQ-47: gates.sh slice 1 — the Charter §3 report fires: charter parse and real diff
+- disposition: wait-to-implement
+- source: https://github.com/RoscoeLotriet/purview/issues/47
+- last_triaged: 2026-08-31 (re-confirmed 2026-09-16, no change)
+- repro: not-attempted (new test coverage against a not-yet-written mechanism)
+- files_expected: .claude/scripts/gates.sh, tests/integration/harness/gates-charter.ts, tests/integration/gates-report.integration.test.ts
+- load_bearing: true
+- gate_level: deep
+- done_when: modifying a pre-existing protected file reports its path in `protected=` while `status` stays GREEN; adding a new file under the same glob reports `none`; `protected_globs` matches the charter's own count; tests 1, 2, 3, 7 and 8 pass; no pre-existing test file is modified; gates GREEN at `deep`
+- confidence: high
+- notes: blocked_on #46 (slice 0 — `resolve_base` and the field plumbing this slice fills in). Pre-agreed split seam if this measures over the 400-line ceiling: land tests 1, 2, 3, 7 here, defer test 8 and the glob-echo to a 1b slice — do not trim a test to fit.
+
+## FQ-48: gates.sh slice 2 — diff shape: deletion, rename, committed state, empty-pathspec guard
+- disposition: wait-to-implement
+- source: https://github.com/RoscoeLotriet/purview/issues/48
+- last_triaged: 2026-08-31 (re-confirmed 2026-09-16, no change)
+- repro: not-attempted (new test coverage against a not-yet-written mechanism)
+- files_expected: .claude/scripts/gates.sh, tests/integration/gates-diff-shape.integration.test.ts
+- load_bearing: true
+- gate_level: deep
+- done_when: deleting or renaming-away a pre-existing protected file reports its path; a committed modification reports identically to an uncommitted one; a zero-glob charter never invokes `git diff` with an empty pathspec; tests 4, 5, 6 and 19 pass; no pre-existing test file is modified; gates GREEN at `deep`
+- confidence: high
+- notes: blocked_on #47 (slice 1's `measure_protected`, which this slice refines). Test 19 is the one to review hardest — an unguarded zero-glob parse would report every changed file as protected, which gets waived by reflex within a day.
+
+## FQ-49: gates.sh slice 3 — charter fidelity: §3 flag, anchored parse, fail-closed degradation
+- disposition: wait-to-implement
+- source: https://github.com/RoscoeLotriet/purview/issues/49
+- last_triaged: 2026-08-31 (re-confirmed 2026-09-16, no change)
+- repro: not-attempted (new test coverage against a not-yet-written mechanism)
+- files_expected: .claude/scripts/gates.sh, tests/integration/gates-charter-fidelity.integration.test.ts
+- load_bearing: true
+- gate_level: deep
+- done_when: `TESTS_ARE_LOAD_BEARING: false` reports `not-enforced`; a missing/renamed `TESTS_PROTECTED` block reports `undetermined`, never `none`; a fourth charter glob is honoured with no second edit; a deleted charter still produces a `FACTORY_GATES:` line; tests 9, 10, 11, 12 and 18 pass; no pre-existing test file is modified; gates GREEN at `deep`
+- confidence: high
+- notes: blocked_on #47 (slice 1's `parse_charter_section3`, which this slice completes). Test 9 is the slice's reason to exist — proof the charter is the single source of the rule.
+
+## FQ-50: gates.sh slice 4 — base-ref override, and the 'full HEAD' bypass closed
+- disposition: wait-to-implement
+- source: https://github.com/RoscoeLotriet/purview/issues/50
+- last_triaged: 2026-08-31 (re-confirmed 2026-09-16, no change)
+- repro: confirmed (`./.claude/scripts/gates.sh full HEAD` measured during the spec: real short SHA, empty diff, indistinguishable from a legitimate run)
+- files_expected: .claude/scripts/gates.sh, tests/integration/gates-base-ref.integration.test.ts
+- load_bearing: true
+- gate_level: deep
+- done_when: a supplied base ref is honoured only when it resolves, is an ancestor of HEAD, and is not HEAD itself on a clean tree; any failure reports `base_source=none` with no fallback to auto-detection; `gates.sh full HEAD` on a clean tree reports `undetermined`, not `none`; tests 13, 14, 15 and 16 pass; no pre-existing test file is modified; gates GREEN at `deep`
+- confidence: high
+- notes: blocked_on #46 (slice 0's `resolve_base`, whose `$2` branch this slice adds). Closes a verified bypass, not a hypothesised one.
+
+## FQ-51: gates.sh slice 5 — Charter §7 line-ceiling measurement (droppable)
+- disposition: wait-to-implement
+- source: https://github.com/RoscoeLotriet/purview/issues/51
+- last_triaged: 2026-08-31 (re-confirmed 2026-09-16, no change)
+- repro: confirmed (`git diff --numstat` cannot see an untracked file; verified an add-only 5-line change measures `code_lines=0` without the untracked-count fix)
+- files_expected: .claude/scripts/gates.sh, .claude/skills/factory-verify/SKILL.md, tests/integration/gates-ceiling.integration.test.ts
+- load_bearing: true
+- gate_level: deep
+- done_when: `gates.sh full` reports `code_lines` (tracked + untracked, docs excluded) and `code_lines_committed` (Charter §7's own invocation); `factory-verify/SKILL.md` states `code_lines` is excluded from its exact-match mismatch check; tests 20–24 pass; no pre-existing test file is modified; gates GREEN at `deep`
+- confidence: medium
+- notes: blocked_on #46. Deliberately droppable — gate 1 approved the §7 ceiling as independently reversible from the §3 fix in #46–#50. Touches two `LOAD_BEARING` files, so this stop needs a human twice: once for `gates.sh`, once for `SKILL.md`.
 
 ---
 
